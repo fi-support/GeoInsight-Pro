@@ -1,7 +1,6 @@
 // --- UI Element references ---
 const directorSection = document.getElementById('director-section');
 const appSection = document.getElementById('app-section');
-const launchAppBtn = document.getElementById('launch-app-btn');
 const clientIdInput = document.getElementById('clientIdInput');
 const cognitoDomainInput = document.getElementById('cognitoDomainInput');
 const redirectUriInput = document.getElementById('redirectUriInput');
@@ -209,7 +208,7 @@ async function getHubs(authenticated) {
         headers['Authorization'] = `Bearer ${accessToken}`;
         responseMessage = "This is a live API response from an authenticated hubs query. It returns all hubs you have access to.";
     } else {
-        responseMessage = "This is a live API response from an unauthenticated hubs query. It only returns public hubs.";
+        responseMessage = "This is a live API response from an unauthenticated hubs query. It only returns public hubs. (Hint. meant to return nothing.)";
     }
     
     const requestDetails = `
