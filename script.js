@@ -191,6 +191,8 @@ function handleLogout() {
 async function getHubs(authenticated) {
     const accessToken = localStorage.getItem('accessToken');
     const headers = { 'Content-Type': 'application/json' };
+    
+    // The GraphQL query from your documentation
     const query = `
         query GetHubs($rootHubsOnly: Boolean) {
             hubs(rootHubsOnly: $rootHubsOnly) {
