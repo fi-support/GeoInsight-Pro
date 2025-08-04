@@ -184,9 +184,10 @@ function handleLogout() {
     localStorage.removeItem('idToken');
     sessionStorage.removeItem('pkce_code_verifier');
     
-    // To properly log out of Cognito, you would redirect to the logout endpoint.
-    // This is a more complete logout process than just clearing local storage.
-    const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&logout_uri=${encodeURIComponent(REDIRECT_URI)}`;
+    // The Cognito logout endpoint expects a parameter named 'redirect_uri'
+    const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
+    
+    // Redirect to the logout endpoint to clear the Cognito session
     window.location.href = logoutUrl;
 }
 
