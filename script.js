@@ -16,8 +16,8 @@ const messageContainer = document.getElementById('message-container');
 const callPublicApiBtn = document.getElementById('call-public-api-btn');
 const callPrivateApiBtn = document.getElementById('call-private-api-btn');
 const apiResponseSection = document.getElementById('api-response-section');
-const apiRequestBox = document.getElementById('api-request-box');
-const apiResponseBox = document.getElementById('api-response-box');
+const apiRequestBox = document.getElementById('apiRequestBox');
+const apiResponseBox = document.getElementById('apiResponseBox');
 
 // --- Configuration (Dynamically updated from inputs) ---
 let CLIENT_ID;
@@ -28,9 +28,9 @@ const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
 let OAUTH_TOKEN_ENDPOINT;
 
 // Default values for convenience
-const DEFAULT_CLIENT_ID = "your-client-id"; 
+const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
 const DEFAULT_COGNITO_DOMAIN = "auth.clearly.app";
-const DEFAULT_REDIRECT_URI = "https://your-app.com/callback"; 
+const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
 const DEFAULT_COGNITO_REGION = "eu-central-1";
 
 // Update config variables when input fields change
@@ -184,13 +184,8 @@ function handleLogout() {
     localStorage.removeItem('idToken');
     sessionStorage.removeItem('pkce_code_verifier');
     
-    // The Cognito logout endpoint expects a parameter named 'redirect_uri'
     const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
-    
-    // Add this line to see the URL before the redirect
     console.log("Logout URL:", logoutUrl);
-    
-    // Redirect to the logout endpoint to clear the Cognito session
     window.location.href = logoutUrl;
 }
 
@@ -198,7 +193,6 @@ async function getHubs(authenticated) {
     const accessToken = localStorage.getItem('accessToken');
     const headers = { 'Content-Type': 'application/json' };
     
-    // The corrected GraphQL query from your documentation
     const query = `query GetHubs($rootHubsOnly: Boolean) { hubs(rootHubsOnly: $rootHubsOnly) { results { ... on Hub { _id name findability type } } } }`;
     const variables = {
         rootHubsOnly: false
@@ -215,7 +209,7 @@ async function getHubs(authenticated) {
         headers['Authorization'] = `Bearer ${accessToken}`;
         responseMessage = "This is a live API response from an authenticated hubs query. It returns all hubs you have access to.";
     } else {
-        responseMessage = "This is a live API response from an unauthenticated hubs query. It only returns public hubs. (Hint. meant to return nothing.)";
+        responseMessage = "This is a live API response from an unauthenticated hubs query. It only returns public hubs.";
     }
     
     const requestDetails = `
@@ -281,8 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
     COGNITO_REGION = cognitoRegionInput.value;
     OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
     
+    // Check if we should skip the director section and show the app section
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('code')) {
+    if (localStorage.getItem('accessToken') || urlParams.get('code')) {
         directorSection.classList.add('hidden');
         appSection.classList.remove('hidden');
     }
@@ -297,8 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (localStorage.getItem('accessToken')) {
         updateLoggedInUI(localStorage.getItem('accessToken'), localStorage.getItem('idToken'));
         showMessage('You are already logged in.', 'info');
-        directorSection.classList.add('hidden');
-        appSection.classList.remove('hidden');
     } else {
         updateLoggedOutUI();
     }
