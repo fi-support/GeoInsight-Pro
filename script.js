@@ -20,18 +20,23 @@ const apiRequestBox = document.getElementById('api-request-box');
 const apiResponseBox = document.getElementById('api-response-box');
 
 // --- Configuration (Dynamically updated from inputs) ---
-let CLIENT_ID = clientIdInput.value;
-let COGNITO_USER_POOL_DOMAIN = cognitoDomainInput.value;
-let REDIRECT_URI = redirectUriInput.value;
-let COGNITO_REGION = cognitoRegionInput.value;
+let CLIENT_ID;
+let COGNITO_USER_POOL_DOMAIN;
+let REDIRECT_URI;
+let COGNITO_REGION;
 const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
-let OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
+let OAUTH_TOKEN_ENDPOINT;
+
+// Default values for convenience
+const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
+const DEFAULT_COGNITO_DOMAIN = "auth.clearly.app";
+const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
+const DEFAULT_COGNITO_REGION = "eu-central-1";
 
 // Update config variables when input fields change
 clientIdInput.addEventListener('input', (e) => CLIENT_ID = e.target.value);
 cognitoDomainInput.addEventListener('input', (e) => {
     COGNITO_USER_POOL_DOMAIN = e.target.value;
-    // Also update the token endpoint dynamically
     OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 });
 redirectUriInput.addEventListener('input', (e) => REDIRECT_URI = e.target.value);
@@ -112,8 +117,8 @@ function updateLoggedOutUI() {
 // --- Core Authentication Flow ---
 async function initiateLogin() {
     hideMessage();
-    if (!COGNITO_USER_POOL_DOMAIN || !CLIENT_ID || !REDIRECT_URI || REDIRECT_URI.includes('<YOUR')) {
-        showMessage('Please fill in all OUP IAM Configuration fields with your specific values.', 'error');
+    if (!COGNITO_USER_POOL_DOMAIN || !CLIENT_ID || !REDIRECT_URI) {
+        showMessage('Please fill in all OUP IAM Configuration fields.', 'error');
         return;
     }
 
@@ -225,7 +230,7 @@ async function getHubs(authenticated) {
         Method: POST
         Headers:
             Content-Type: application/json
-            ${authenticated ? `Authorization: Bearer <your-access-token>` : ''}
+            ${authenticated ? `Authorization: Bearer ${accessToken.substring(0, 10)}...` : ''}
         Body:
         ${JSON.stringify(requestBody, null, 2)}
     `;
@@ -254,7 +259,7 @@ async function getHubs(authenticated) {
 
     } catch (error) {
         console.error('API call error:', error);
-        showMessage(`API call failed: ${error.message}. Check the console for details. (Likely a CORS issue or network problem)`, 'error');
+        showMessage(`API call failed: ${error.message}. Check the console for details.`, 'error');
     }
 }
 
@@ -270,11 +275,18 @@ callPublicApiBtn.addEventListener('click', () => getHubs(false));
 callPrivateApiBtn.addEventListener('click', () => getHubs(true));
 
 document.addEventListener('DOMContentLoaded', () => {
-    const savedCognitoDomain = localStorage.getItem('cognitoUserPoolDomain');
-    if (savedCognitoDomain) {
-        cognitoDomainInput.value = savedCognitoDomain;
-        COGNITO_USER_POOL_DOMAIN = savedCognitoDomain;
-    }
+    // Set default values for input fields if not already set
+    clientIdInput.value = localStorage.getItem('clientId') || DEFAULT_CLIENT_ID;
+    cognitoDomainInput.value = localStorage.getItem('cognitoUserPoolDomain') || DEFAULT_COGNITO_DOMAIN;
+    redirectUriInput.value = localStorage.getItem('redirectUri') || DEFAULT_REDIRECT_URI;
+    cognitoRegionInput.value = localStorage.getItem('cognitoRegion') || DEFAULT_COGNITO_REGION;
+
+    // Update global variables with the loaded values
+    CLIENT_ID = clientIdInput.value;
+    COGNITO_USER_POOL_DOMAIN = cognitoDomainInput.value;
+    REDIRECT_URI = redirectUriInput.value;
+    COGNITO_REGION = cognitoRegionInput.value;
+    OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
     
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('code')) {
@@ -299,6 +311,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-cognitoDomainInput.addEventListener('change', (e) => {
-    localStorage.setItem('cognitoUserPoolDomain', e.target.value);
-});
+// Save input values to localStorage when they change
+clientIdInput.addEventListener('change', (e) => localStorage.setItem('clientId', e.target.value));
+cognitoDomainInput.addEventListener('change', (e) => localStorage.setItem('cognitoUserPoolDomain', e.target.value));
+redirectUriInput.addEventListener('change', (e) => localStorage.setItem('redirectUri', e.target.value));
+cognitoRegionInput.addEventListener('change', (e) => localStorage.setItem('cognitoRegion', e.target.value));
