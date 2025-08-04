@@ -1,6 +1,7 @@
 // --- UI Element references ---
 const directorSection = document.getElementById('director-section');
 const appSection = document.getElementById('app-section');
+const launchAppBtn = document.getElementById('launch-app-btn');
 const clientIdInput = document.getElementById('clientIdInput');
 const cognitoDomainInput = document.getElementById('cognitoDomainInput');
 const redirectUriInput = document.getElementById('redirectUriInput');
