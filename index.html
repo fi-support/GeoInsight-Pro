@@ -146,8 +146,8 @@
                 <p class="text-green-600 text-xl font-semibold mb-6">Successfully Logged In!</p>
                 
                 <div class="token-display w-full mt-4">
-                    <h3 class="text-xl">Your Simulated JWTs:</h3>
-                    <p class="text-gray-600 mb-4">These tokens are for demonstration purposes. In a real app, you'd use the Access Token for API calls.</p>
+                    <h3 class="text-xl">Your JWTs:</h3>
+                    <p class="text-gray-600 mb-4">These are the live tokens received from the OUP's authentication server.</p>
                     <div class="mb-4">
                         <h4 class="font-semibold text-gray-700 mb-2">Access Token:</h4>
                         <pre id="access-token" class="bg-gray-100 p-3 rounded-lg text-gray-800 text-sm"></pre>
@@ -159,14 +159,14 @@
                 </div>
 
                 <div class="mt-8 flex flex-col md:flex-row justify-center items-center gap-4">
-                    <button id="call-public-api-btn" class="btn btn-api w-full md:w-auto">Simulate Public Hubs Query</button>
-                    <button id="call-private-api-btn" class="btn btn-api w-full md:w-auto">Simulate Authenticated Hubs Query</button>
+                    <button id="call-public-api-btn" class="btn btn-api w-full md:w-auto">Get Public Hubs</button>
+                    <button id="call-private-api-btn" class="btn btn-api w-full md:w-auto">Get Authenticated Hubs</button>
                 </div>
             </div>
 
             <div id="api-response-section" class="hidden">
-                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Simulated API Response</h2>
-                <p class="text-lg text-gray-600">This demonstrates what a real GraphQL request and response would look like.</p>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">API Response</h2>
+                <p class="text-lg text-gray-600">This is the live response from the Clearly.Hub GraphQL endpoint.</p>
                 <div id="api-request-box" class="api-response-box mb-4"></div>
                 <div id="api-response-box" class="api-response-box"></div>
             </div>
@@ -203,10 +203,15 @@
         let REDIRECT_URI = redirectUriInput.value;
         let COGNITO_REGION = cognitoRegionInput.value;
         const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
+        const OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 
         // Update config variables when input fields change
         clientIdInput.addEventListener('input', (e) => CLIENT_ID = e.target.value);
-        cognitoDomainInput.addEventListener('input', (e) => COGNITO_USER_POOL_DOMAIN = e.target.value);
+        cognitoDomainInput.addEventListener('input', (e) => {
+            COGNITO_USER_POOL_DOMAIN = e.target.value;
+            // Also update the token endpoint dynamically
+            OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
+        });
         redirectUriInput.addEventListener('input', (e) => REDIRECT_URI = e.target.value);
         cognitoRegionInput.addEventListener('input', (e) => COGNITO_REGION = e.target.value);
 
@@ -314,14 +319,40 @@
 
         async function exchangeCodeForTokens(code, codeVerifier) {
             hideMessage();
-            showMessage('Exchanging authorization code for tokens (simulated)...', 'info');
-            const dummyAccessToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhbGljZS1wbGFubmVyLTEyMyIsImV2ZW50X2lkIjoiZHVtbXktZXZlbnQtaWQiLCJ0b2tlbl91c2UiOiJhY2Nlc3MiLCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIiwiYXV0aF90aW1lIjoxNjc4ODg2NDAwLCJpc3MiOiJodHRwczovL2NvZ25pdG8taWRwLmF1LXByb3h5LmFtYXpvbmF3cy5jb20vY29nbml0by11c2VyLXBvb2wtaWQiLCJleHAiOjE2Nzg4OTAwMDAsInVzZXJuYW1lIjoiYWxpY2UucGxhbm5lciIsImNsaWVudF9pZCI6IjR1Mm9nM2oxdnI4cDhhNGF0MWNsM2psYm4ifQ.SIMULATED_ACCESS_TOKEN_SIGNATURE`;
-            const dummyIdToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhbGljZS1wbGFubmVyLTEyMyIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJpc3MiOiJodHRwczovL2NvZ25pdG8taWRwLmF1LXByb3h5LmFtYXpvbmF3cy5jb20vY29nbml0by11c2VyLXBvb2wtaWQiLCJjb2duaXRvOnVzZXJuYW1lIjoiYWxpY2UucGxhbm5lciIsImF1ZCI6IjR1Mm9nM2oxdnI4cDhhNGF0MWNsM2psYm4iLCJldmVudF9pZCI6ImR1bW15LWV2ZW50LWlkIiwidG9rZW5fdXNlIjoiaWQiLCJhdXRoX3RpbWUiOjE2Nzg4ODY0MDAsImV4cCI6MTY3ODg5MDAwMCwiaWF0IjoxNjc4ODg2NDAwLCJlbWFpbCI6ImFsaWNlLnBsYW5uZXJAZGVuYm9zY2gubmwiLCJjdXN0b206b3JnYW5pemF0aW9uIjoiRGVuIEJvc2NoIENpdHkiLCJjdXN0b206cm9sZSI6IkNpdHkgUGxhbm5lciJ9.SIMULATED_ID_TOKEN_SIGNATURE`;
+            showMessage('Exchanging authorization code for tokens...', 'info');
             
-            localStorage.setItem('accessToken', dummyAccessToken);
-            localStorage.setItem('idToken', dummyIdToken);
-            updateLoggedInUI(dummyAccessToken, dummyIdToken);
-            showMessage('Successfully obtained simulated tokens from OUP!', 'success');
+            const body = new URLSearchParams({
+                grant_type: 'authorization_code',
+                client_id: CLIENT_ID,
+                code: code,
+                redirect_uri: REDIRECT_URI,
+                code_verifier: codeVerifier
+            });
+
+            try {
+                const response = await fetch(OAUTH_TOKEN_ENDPOINT, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: body.toString()
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error_description || 'Failed to exchange code for tokens');
+                }
+
+                const data = await response.json();
+                localStorage.setItem('accessToken', data.access_token);
+                localStorage.setItem('idToken', data.id_token);
+                updateLoggedInUI(data.access_token, data.id_token);
+                showMessage('Successfully obtained live tokens from OUP!', 'success');
+
+            } catch (error) {
+                console.error('Token exchange error:', error);
+                showMessage(`Authentication failed: ${error.message}. Check your configuration and try again.`, 'error');
+                updateLoggedOutUI();
+            }
         }
 
         function handleLogout() {
@@ -334,59 +365,39 @@
             showMessage('Logged out successfully.', 'info');
         }
 
-        async function simulateHubsQuery(authenticated) {
+        async function getHubs(authenticated) {
             const accessToken = localStorage.getItem('accessToken');
             const headers = { 'Content-Type': 'application/json' };
             const query = `
-            query GetHubs($rootHubsOnly: Boolean) {
-                hubs(rootHubsOnly: $rootHubsOnly) {
-                    results {
-                        ... on Hub {
-                            _id
-                            name
-                            findability
+                query GetHubs($rootHubsOnly: Boolean) {
+                    hubs(rootHubsOnly: $rootHubsOnly) {
+                        results {
+                            ... on Hub {
+                                _id
+                                name
+                                findability
+                                type
+                            }
                         }
                     }
                 }
-            }`;
+            `;
             const variables = {
                 rootHubsOnly: false
             };
             const requestBody = { query, variables };
             
             let responseMessage = "";
-            let simulatedResponse = {};
-
+            
             if (authenticated) {
                 if (!accessToken) {
                     showMessage('No Access Token found. Please log in first.', 'error');
                     return;
                 }
                 headers['Authorization'] = `Bearer ${accessToken}`;
-                responseMessage = "This is a simulated response to an authenticated hubs query. In a real scenario, this would return all hubs you have access to, including private ones.";
-                simulatedResponse = {
-                    "data": {
-                        "hubs": {
-                            "results": [
-                                {"_id": "64e9c5c8fe2ac522c6ac7b43", "name": "Den Bosch Hub", "findability": "LIMITED"},
-                                {"_id": "65e9c5c8fe2ac522c6ac7b44", "name": "Urban Innovation Hub", "findability": "LIMITED"},
-                                {"_id": "66e9c5c8fe2ac522c6ac7b45", "name": "Simay's Personal Hub", "findability": "LIMITED"}
-                            ]
-                        }
-                    }
-                };
+                responseMessage = "This is a live API response from an authenticated hubs query. It returns all hubs you have access to.";
             } else {
-                responseMessage = "This is a simulated response to an unauthenticated hubs query. In a real scenario, this would only return public hubs.";
-                simulatedResponse = {
-                    "data": {
-                        "hubs": {
-                            "results": [
-                                {"_id": "64e9c5c8fe2ac522c6ac7b43", "name": "Den Bosch Public Hub", "findability": "PUBLIC"},
-                                {"_id": "65e9c5c8fe2ac522c6ac7b44", "name": "Urban Innovation Public Hub", "findability": "PUBLIC"}
-                            ]
-                        }
-                    }
-                };
+                responseMessage = "This is a live API response from an unauthenticated hubs query. It only returns public hubs.";
             }
             
             const requestDetails = `
@@ -395,14 +406,36 @@
                 Headers:
                     Content-Type: application/json
                     ${authenticated ? `Authorization: Bearer <your-access-token>` : ''}
-
                 Body:
                 ${JSON.stringify(requestBody, null, 2)}
             `;
 
-            apiRequestBox.textContent = `--- Simulated Request ---\n${requestDetails}`;
-            apiResponseBox.textContent = `--- Simulated Response ---\n${responseMessage}\n\n${JSON.stringify(simulatedResponse, null, 2)}`;
-            apiResponseSection.classList.remove('hidden');
+            try {
+                showMessage(`Making ${authenticated ? 'authenticated' : 'public'} GraphQL query...`, 'info');
+                apiResponseSection.classList.remove('hidden');
+                apiRequestBox.textContent = `--- Request ---\n${requestDetails}`;
+                
+                const response = await fetch(GRAPHQL_ENDPOINT, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: headers,
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    apiResponseBox.textContent = `--- Response ---\n${responseMessage}\n\n${JSON.stringify(data, null, 2)}`;
+                    showMessage('GraphQL query successful!', 'success');
+                } else {
+                    apiResponseBox.textContent = `--- Error Response ---\n${JSON.stringify(data, null, 2)}`;
+                    showMessage('GraphQL query failed. Check the console for details.', 'error');
+                }
+
+            } catch (error) {
+                console.error('API call error:', error);
+                showMessage(`API call failed: ${error.message}. Check the console for details. (Likely a CORS issue or network problem)`, 'error');
+            }
         }
 
         // --- Event Listeners and Initial Load Logic ---
@@ -413,8 +446,8 @@
 
         loginBtn.addEventListener('click', initiateLogin);
         logoutBtn.addEventListener('click', handleLogout);
-        callPublicApiBtn.addEventListener('click', () => simulateHubsQuery(false));
-        callPrivateApiBtn.addEventListener('click', () => simulateHubsQuery(true));
+        callPublicApiBtn.addEventListener('click', () => getHubs(false));
+        callPrivateApiBtn.addEventListener('click', () => getHubs(true));
 
         document.addEventListener('DOMContentLoaded', () => {
             const savedCognitoDomain = localStorage.getItem('cognitoUserPoolDomain');
@@ -438,7 +471,7 @@
                 sessionStorage.removeItem('pkce_code_verifier');
             } else if (localStorage.getItem('accessToken')) {
                 updateLoggedInUI(localStorage.getItem('accessToken'), localStorage.getItem('idToken'));
-                showMessage('You are already logged in (simulated session restored).', 'info');
+                showMessage('You are already logged in.', 'info');
                 directorSection.classList.add('hidden');
                 appSection.classList.remove('hidden');
             } else {
