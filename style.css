@@ -1,0 +1,102 @@
+/* Import Tailwind CSS and Inter font */
+@import url('https://cdn.tailwindcss.com');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+/* Apply Inter font and basic background/text colors */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f0f4f8;
+    color: #334155;
+}
+/* Container for the main application content */
+.container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 30px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+/* Base button styling */
+.btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+/* Primary button styling (Login) */
+.btn-primary {
+    background-color: #3b82f6;
+    color: #ffffff;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+}
+.btn-primary:hover {
+    background-color: #2563eb;
+    transform: translateY(-2px);
+}
+/* Secondary button styling (Logout) */
+.btn-secondary {
+    background-color: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
+}
+.btn-secondary:hover {
+    background-color: #dc2626;
+    transform: translateY(-2px);
+}
+/* API Call button */
+.btn-api {
+    background-color: #10b981;
+    color: #ffffff;
+    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+}
+.btn-api:hover {
+    background-color: #059669;
+    transform: translateY(-2px);
+}
+/* Custom message box for alerts/info (instead of alert()) */
+.message-box {
+    padding: 16px;
+    border-radius: 8px;
+    margin-top: 20px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    word-break: break-all;
+    background-color: #e0f2fe;
+    border: 1px solid #93c5fd;
+    color: #1e40af;
+}
+/* Styling for displaying tokens */
+.token-display {
+    background-color: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin-top: 15px;
+    font-size: 0.875rem;
+}
+.token-display h3 {
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #1a202c;
+}
+.token-display pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+    background-color: #f1f5f9;
+    padding: 10px;
+    border-radius: 6px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    overflow-x: auto;
+}
+/* Styling for API response box */
+.api-response-box {
+    padding: 16px;
+    border-radius: 8px;
+    margin-top: 20px;
+    background-color: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    white-space: pre-wrap;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+}
