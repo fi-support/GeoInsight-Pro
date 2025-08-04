@@ -184,7 +184,13 @@ function handleLogout() {
     localStorage.removeItem('idToken');
     sessionStorage.removeItem('pkce_code_verifier');
     
+    // The Cognito logout endpoint expects a parameter named 'redirect_uri'
     const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
+    
+    // Add this line to see the URL before the redirect
+    console.log("Logout URL:", logoutUrl);
+    
+    // Redirect to the logout endpoint to clear the Cognito session
     window.location.href = logoutUrl;
 }
 
