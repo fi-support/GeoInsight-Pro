@@ -87,6 +87,15 @@
             font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
             overflow-x: auto;
         }
+        .api-response-box {
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            background-color: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            white-space: pre-wrap;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+        }
     </style>
 </head>
 <body class="p-4">
@@ -123,7 +132,7 @@
                     </div>
                 </div>
                 <p class="text-sm text-gray-500 mt-4">
-                    <strong>Important:</strong> For a real connection, ensure the "Cognito User Pool Domain" is correct for your OUP environment. The "Client ID" and "Redirect URI" must be accurately registered in your App Client settings within Clearly.Hub's API Config.
+                    <strong>Important:</strong> For a real connection, ensure the "Client ID" and "Redirect URI" are accurately registered in your App Client settings within Clearly.Hub's API Config.
                 </p>
             </div>
 
@@ -150,9 +159,16 @@
                 </div>
 
                 <div class="mt-8 flex flex-col md:flex-row justify-center items-center gap-4">
-                    <button id="call-api-btn" class="btn btn-api w-full md:w-auto">Simulate OUP API Call</button>
-                    <button id="call-bim-api-btn" class="btn btn-api w-full md:w-auto">Simulate Clearly.BIM API Call</button>
+                    <button id="call-public-api-btn" class="btn btn-api w-full md:w-auto">Simulate Public Hubs Query</button>
+                    <button id="call-private-api-btn" class="btn btn-api w-full md:w-auto">Simulate Authenticated Hubs Query</button>
                 </div>
+            </div>
+
+            <div id="api-response-section" class="hidden">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Simulated API Response</h2>
+                <p class="text-lg text-gray-600">This demonstrates what a real GraphQL request and response would look like.</p>
+                <div id="api-request-box" class="api-response-box mb-4"></div>
+                <div id="api-response-box" class="api-response-box"></div>
             </div>
 
             <div id="message-container" class="message-box hidden"></div>
@@ -175,14 +191,18 @@
         const accessTokenDisplay = document.getElementById('access-token');
         const idTokenDisplay = document.getElementById('id-token');
         const messageContainer = document.getElementById('message-container');
-        const callApiBtn = document.getElementById('call-api-btn');
-        const callBimApiBtn = document.getElementById('call-bim-api-btn');
+        const callPublicApiBtn = document.getElementById('call-public-api-btn');
+        const callPrivateApiBtn = document.getElementById('call-private-api-btn');
+        const apiResponseSection = document.getElementById('api-response-section');
+        const apiRequestBox = document.getElementById('api-request-box');
+        const apiResponseBox = document.getElementById('api-response-box');
 
         // --- Configuration (Dynamically updated from inputs) ---
         let CLIENT_ID = clientIdInput.value;
         let COGNITO_USER_POOL_DOMAIN = cognitoDomainInput.value;
         let REDIRECT_URI = redirectUriInput.value;
         let COGNITO_REGION = cognitoRegionInput.value;
+        const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
 
         // Update config variables when input fields change
         clientIdInput.addEventListener('input', (e) => CLIENT_ID = e.target.value);
@@ -314,32 +334,78 @@
             showMessage('Logged out successfully.', 'info');
         }
 
-        function simulateOupApiCall() {
+        async function simulateHubsQuery(authenticated) {
             const accessToken = localStorage.getItem('accessToken');
-            if (!accessToken) {
-                showMessage('No Access Token found. Please log in first.', 'error');
-                return;
-            }
-            showMessage('Simulating OUP API call with Access Token...', 'info');
-            setTimeout(() => {
-                showMessage('OUP API call simulated successfully! (If this were real, your Access Token would be sent in the Authorization header.)', 'success');
-            }, 1000);
-        }
+            const headers = { 'Content-Type': 'application/json' };
+            const query = `
+            query GetHubs($rootHubsOnly: Boolean) {
+                hubs(rootHubsOnly: $rootHubsOnly) {
+                    results {
+                        ... on Hub {
+                            _id
+                            name
+                            findability
+                        }
+                    }
+                }
+            }`;
+            const variables = {
+                rootHubsOnly: false
+            };
+            const requestBody = { query, variables };
+            
+            let responseMessage = "";
+            let simulatedResponse = {};
 
-        function simulateBimApiCall() {
-            const accessToken = localStorage.getItem('accessToken');
-            if (!accessToken) {
-                showMessage('No Access Token found. Please log in first.', 'error');
-                return;
+            if (authenticated) {
+                if (!accessToken) {
+                    showMessage('No Access Token found. Please log in first.', 'error');
+                    return;
+                }
+                headers['Authorization'] = `Bearer ${accessToken}`;
+                responseMessage = "This is a simulated response to an authenticated hubs query. In a real scenario, this would return all hubs you have access to, including private ones.";
+                simulatedResponse = {
+                    "data": {
+                        "hubs": {
+                            "results": [
+                                {"_id": "64e9c5c8fe2ac522c6ac7b43", "name": "Den Bosch Hub", "findability": "LIMITED"},
+                                {"_id": "65e9c5c8fe2ac522c6ac7b44", "name": "Urban Innovation Hub", "findability": "LIMITED"},
+                                {"_id": "66e9c5c8fe2ac522c6ac7b45", "name": "Simay's Personal Hub", "findability": "LIMITED"}
+                            ]
+                        }
+                    }
+                };
+            } else {
+                responseMessage = "This is a simulated response to an unauthenticated hubs query. In a real scenario, this would only return public hubs.";
+                simulatedResponse = {
+                    "data": {
+                        "hubs": {
+                            "results": [
+                                {"_id": "64e9c5c8fe2ac522c6ac7b43", "name": "Den Bosch Public Hub", "findability": "PUBLIC"},
+                                {"_id": "65e9c5c8fe2ac522c6ac7b44", "name": "Urban Innovation Public Hub", "findability": "PUBLIC"}
+                            ]
+                        }
+                    }
+                };
             }
-            showMessage('Simulating Clearly.BIM API call with Access Token...', 'info');
-            setTimeout(() => {
-                showMessage('Clearly.BIM API call simulated successfully! (This would typically be a GraphQL query with your Access Token.)', 'success');
-            }, 1000);
+            
+            const requestDetails = `
+                URL: ${GRAPHQL_ENDPOINT}
+                Method: POST
+                Headers:
+                    Content-Type: application/json
+                    ${authenticated ? `Authorization: Bearer <your-access-token>` : ''}
+
+                Body:
+                ${JSON.stringify(requestBody, null, 2)}
+            `;
+
+            apiRequestBox.textContent = `--- Simulated Request ---\n${requestDetails}`;
+            apiResponseBox.textContent = `--- Simulated Response ---\n${responseMessage}\n\n${JSON.stringify(simulatedResponse, null, 2)}`;
+            apiResponseSection.classList.remove('hidden');
         }
 
         // --- Event Listeners and Initial Load Logic ---
-
         launchAppBtn.addEventListener('click', () => {
             directorSection.classList.add('hidden');
             appSection.classList.remove('hidden');
@@ -347,8 +413,8 @@
 
         loginBtn.addEventListener('click', initiateLogin);
         logoutBtn.addEventListener('click', handleLogout);
-        callApiBtn.addEventListener('click', simulateOupApiCall);
-        callBimApiBtn.addEventListener('click', simulateBimApiCall);
+        callPublicApiBtn.addEventListener('click', () => simulateHubsQuery(false));
+        callPrivateApiBtn.addEventListener('click', () => simulateHubsQuery(true));
 
         document.addEventListener('DOMContentLoaded', () => {
             const savedCognitoDomain = localStorage.getItem('cognitoUserPoolDomain');
@@ -357,7 +423,6 @@
                 COGNITO_USER_POOL_DOMAIN = savedCognitoDomain;
             }
             
-            // Check if we are returning from a redirect and should show the app section
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('code')) {
                 directorSection.classList.add('hidden');
