@@ -139,7 +139,6 @@
 
             <div id="auth-section" class="flex flex-col md:flex-row justify-center items-center gap-4 mb-8">
                 <button id="login-btn" class="btn btn-primary w-full md:w-auto">Login to OUP</button>
-                <button id="logout-btn" class="btn btn-secondary w-full md:w-auto hidden">Logout</button>
             </div>
 
             <div id="logged-in-section" class="hidden flex flex-col items-center">
@@ -161,6 +160,7 @@
                 <div class="mt-8 flex flex-col md:flex-row justify-center items-center gap-4">
                     <button id="call-public-api-btn" class="btn btn-api w-full md:w-auto">Get Public Hubs</button>
                     <button id="call-private-api-btn" class="btn btn-api w-full md:w-auto">Get Authenticated Hubs</button>
+                    <button id="logout-btn" class="btn btn-secondary w-full md:w-auto">Logout</button>
                 </div>
             </div>
 
@@ -278,8 +278,6 @@
             idTokenDisplay.textContent = idToken;
             authSection.classList.add('hidden');
             loggedInSection.classList.remove('hidden');
-            loginBtn.classList.add('hidden');
-            logoutBtn.classList.remove('hidden');
         }
 
         function updateLoggedOutUI() {
@@ -287,8 +285,6 @@
             idTokenDisplay.textContent = '';
             authSection.classList.remove('hidden');
             loggedInSection.classList.add('hidden');
-            loginBtn.classList.remove('hidden');
-            logoutBtn.classList.add('hidden');
         }
 
         // --- Core Authentication Flow ---
@@ -360,9 +356,11 @@
             localStorage.removeItem('accessToken');
             localStorage.removeItem('idToken');
             sessionStorage.removeItem('pkce_code_verifier');
-            updateLoggedOutUI();
-
-            showMessage('Logged out successfully.', 'info');
+            
+            // To properly log out of Cognito, you would redirect to the logout endpoint.
+            // This is a more complete logout process than just clearing local storage.
+            const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&logout_uri=${encodeURIComponent(REDIRECT_URI)}`;
+            window.location.href = logoutUrl;
         }
 
         async function getHubs(authenticated) {
