@@ -28,9 +28,9 @@ const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
 let OAUTH_TOKEN_ENDPOINT;
 
 // Default values for convenience
-const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
+const DEFAULT_CLIENT_ID = "your-client-id"; 
 const DEFAULT_COGNITO_DOMAIN = "auth.clearly.app";
-const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
+const DEFAULT_REDIRECT_URI = "https://your-app.com/callback"; 
 const DEFAULT_COGNITO_REGION = "eu-central-1";
 
 // Update config variables when input fields change
@@ -192,21 +192,8 @@ async function getHubs(authenticated) {
     const accessToken = localStorage.getItem('accessToken');
     const headers = { 'Content-Type': 'application/json' };
     
-    // The GraphQL query from your documentation
-    const query = `
-        query GetHubs($rootHubsOnly: Boolean) {
-            hubs(rootHubsOnly: $rootHubsOnly) {
-                results {
-                    ... on Hub {
-                        _id
-                        name
-                        findability
-                        type
-                    }
-                }
-            }
-        }
-    `;
+    // The corrected GraphQL query from your documentation
+    const query = `query GetHubs($rootHubsOnly: Boolean) { hubs(rootHubsOnly: $rootHubsOnly) { results { ... on Hub { _id name findability type } } } }`;
     const variables = {
         rootHubsOnly: false
     };
