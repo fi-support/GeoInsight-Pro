@@ -16,8 +16,8 @@ const messageContainer = document.getElementById('message-container');
 const callPublicApiBtn = document.getElementById('call-public-api-btn');
 const callPrivateApiBtn = document.getElementById('call-private-api-btn');
 const apiResponseSection = document.getElementById('api-response-section');
-const apiRequestBox = document.getElementById('apiRequestBox');
-const apiResponseBox = document.getElementById('apiResponseBox');
+const apiRequestBox = document.getElementById('api-request-box');
+const apiResponseBox = document.getElementById('api-response-box');
 
 // --- Configuration (Dynamically updated from inputs) ---
 let CLIENT_ID;
@@ -117,7 +117,7 @@ function updateLoggedOutUI() {
 // --- Core Authentication Flow ---
 async function initiateLogin() {
     hideMessage();
-    if (!COGNITO_USER_POOL_DOMAIN || !CLIENT_ID || !REDIRECT_URI) {
+    if (!CLIENT_ID || !COGNITO_USER_POOL_DOMAIN || !REDIRECT_URI) {
         showMessage('Please fill in all OUP IAM Configuration fields.', 'error');
         return;
     }
