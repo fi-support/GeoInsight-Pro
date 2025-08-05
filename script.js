@@ -115,6 +115,7 @@ function setAppView(isAppVisible) {
     }
 }
 
+
 function setLoggedInView(isLoggedIn) {
     if (isLoggedIn) {
         authSection.classList.add('hidden');
@@ -203,13 +204,22 @@ async function exchangeCodeForTokens(code, codeVerifier) {
 
 function handleLogout() {
     hideMessage();
+    // Clear local data
     localStorage.removeItem('accessToken');
     localStorage.removeItem('idToken');
     sessionStorage.removeItem('pkce_code_verifier');
-    
-    const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
+
+    // Show logged-out view (welcome page)
+    setLoggedInView(false);
+    setAppView(false);
+
+    // Optional: full Cognito logout to clear hosted UI session
+    // ⚠ Requires `logout_uri` not `redirect_uri`
+    const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&logout_uri=${encodeURIComponent(REDIRECT_URI)}`;
     window.location.href = logoutUrl;
 }
+
+
 
 async function getHubs(authenticated) {
     const accessToken = localStorage.getItem('accessToken');
