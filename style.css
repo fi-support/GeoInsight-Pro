@@ -1,128 +1,48 @@
-/* Import Tailwind CSS and Inter font */
-@import url('https://cdn.tailwindcss.com');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-
-/* Apply Inter font and basic background/text colors */
 body {
-    font-family: 'Inter', sans-serif;
-    background-color: #f0f4f8;
-    color: #334155;
+    font-family: Arial, sans-serif;
+    margin: 0;
 }
-/* Main container for the app */
-.container {
-    max-width: 1400px; /* Increased max-width for split screen */
-    margin: 40px auto;
-    padding: 30px;
-    background-color: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+.page {
+    min-height: 100vh;
+    padding: 20px;
 }
-/* Two-column layout for the app section */
-.split-screen {
-    display: grid;
-    grid-template-columns: 1fr 2fr; /* Left panel takes 1/3, right takes 2/3 */
-    gap: 40px;
-    min-height: 70vh; /* Ensure some vertical space */
+
+#welcome-page {
+    background-color: #f0f8ff; /* Light blue */
 }
-/* Left panel styling */
-.left-panel {
-    padding-right: 40px;
-    background-color: #ffffff; /* White background for left panel */
+
+#iam-page {
+    background-color: #fff8f0; /* Light orange */
+    display: none;
 }
-/* Right panel styling */
-.right-panel {
-    padding-left: 40px;
-    background-color: #ffffff; /* White background for right panel */
-}
-/* Base button styling */
-.btn {
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-weight: 600;
-    transition: all 0.2s ease-in-out;
+
+button {
+    padding: 10px 15px;
+    margin: 5px;
+    border: none;
     cursor: pointer;
+    border-radius: 5px;
 }
-/* Primary button styling (Login) */
-.btn-primary {
-    background-color: #3b82f6;
-    color: #ffffff;
-    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+
+.primary {
+    background-color: #007bff;
+    color: white;
 }
-.btn-primary:hover {
-    background-color: #2563eb;
-    transform: translateY(-2px);
+
+.danger {
+    background-color: #dc3545;
+    color: white;
 }
-/* Secondary button styling (Logout) */
-.btn-secondary {
-    background-color: #ef4444;
-    color: #ffffff;
-    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
+
+.success {
+    background-color: #28a745;
+    color: white;
 }
-.btn-secondary:hover {
-    background-color: #dc2626;
-    transform: translateY(-2px);
-}
-/* API Call button */
-.btn-api {
-    background-color: #10b981;
-    color: #ffffff;
-    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
-}
-.btn-api:hover {
-    background-color: #059669;
-    transform: translateY(-2px);
-}
-/* Custom message box for alerts/info (instead of alert()) */
-.message-box {
-    padding: 16px;
-    border-radius: 8px;
-    margin-top: 20px;
-    font-size: 0.95rem;
-    line-height: 1.5;
-    word-break: break-all;
-    background-color: #e0f2fe;
-    border: 1px solid #93c5fd;
-    color: #1e40af;
-}
-/* Styling for displaying tokens */
-.token-display {
-    background-color: #f8fafc;
-    padding: 15px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    margin-top: 15px;
-    font-size: 0.875rem;
-}
-.token-display h3 {
-    font-weight: 700;
-    margin-bottom: 10px;
-    color: #1a202c;
-}
-.token-display pre {
-    white-space: pre-wrap;
-    word-break: break-all;
-    background-color: #f1f5f9;
+
+.token-box {
+    background-color: #eee;
     padding: 10px;
-    border-radius: 6px;
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-    overflow-x: auto;
-}
-/* Styling for API response box */
-.api-response-box {
-    padding: 16px;
-    border-radius: 8px;
-    margin-top: 20px;
-    background-color: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    white-space: pre-wrap;
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-}
-/* Card for director section */
-.card {
-    max-width: 600px;
-    padding: 40px;
-    background-color: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    text-align: center;
+    border-radius: 5px;
+    word-break: break-all;
 }
