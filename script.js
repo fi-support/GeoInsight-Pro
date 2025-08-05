@@ -18,6 +18,10 @@ const callPrivateApiBtn = document.getElementById('call-private-api-btn');
 const apiResponseSection = document.getElementById('api-response-section');
 const apiRequestBox = document.getElementById('api-request-box');
 const apiResponseBox = document.getElementById('api-response-box');
+const loggedInStatus = document.getElementById('status-panel').querySelector('p.text-green-600');
+const loggedOutStatus = document.getElementById('status-panel').querySelector('p.text-gray-600');
+const jwtDisplaySection = document.getElementById('jwt-display-section');
+
 
 // --- Configuration (Dynamically updated from inputs) ---
 let CLIENT_ID;
@@ -34,13 +38,13 @@ const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
 const DEFAULT_COGNITO_REGION = "eu-central-1";
 
 // Update config variables when input fields change
-clientIdInput.addEventListener('input', (e) => CLIENT_ID = e.target.value);
+clientIdInput.addEventListener('input', (e) => localStorage.setItem('clientId', e.target.value));
 cognitoDomainInput.addEventListener('input', (e) => {
-    COGNITO_USER_POOL_DOMAIN = e.target.value;
-    OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
+    localStorage.setItem('cognitoUserPoolDomain', e.target.value);
+    OAUTH_TOKEN_ENDPOINT = `https://${e.target.value}/oauth2/token`;
 });
-redirectUriInput.addEventListener('input', (e) => REDIRECT_URI = e.target.value);
-cognitoRegionInput.addEventListener('input', (e) => COGNITO_REGION = e.target.value);
+redirectUriInput.addEventListener('input', (e) => localStorage.setItem('redirectUri', e.target.value));
+cognitoRegionInput.addEventListener('input', (e) => localStorage.setItem('cognitoRegion', e.target.value));
 
 // --- PKCE Helper Functions ---
 function generateRandomString(length) {
@@ -100,18 +104,30 @@ function hideMessage() {
     messageContainer.classList.add('hidden');
 }
 
-function updateLoggedInUI(accessToken, idToken) {
-    accessTokenDisplay.textContent = accessToken;
-    idTokenDisplay.textContent = idToken;
-    authSection.classList.add('hidden');
-    loggedInSection.classList.remove('hidden');
+function setAppView(isAppVisible) {
+    if (isAppVisible) {
+        directorSection.classList.add('hidden');
+        appSection.classList.remove('hidden');
+    } else {
+        directorSection.classList.remove('hidden');
+        appSection.classList.add('hidden');
+    }
 }
 
-function updateLoggedOutUI() {
-    accessTokenDisplay.textContent = '';
-    idTokenDisplay.textContent = '';
-    authSection.classList.remove('hidden');
-    loggedInSection.classList.add('hidden');
+function setLoggedInView(isLoggedIn) {
+    if (isLoggedIn) {
+        authSection.classList.add('hidden');
+        loggedInSection.classList.remove('hidden');
+        loggedInStatus.classList.remove('hidden');
+        loggedOutStatus.classList.add('hidden');
+        jwtDisplaySection.classList.remove('hidden');
+    } else {
+        authSection.classList.remove('hidden');
+        loggedInSection.classList.add('hidden');
+        loggedInStatus.classList.add('hidden');
+        loggedOutStatus.classList.remove('hidden');
+        jwtDisplaySection.classList.add('hidden');
+    }
 }
 
 // --- Core Authentication Flow ---
@@ -168,13 +184,15 @@ async function exchangeCodeForTokens(code, codeVerifier) {
         const data = await response.json();
         localStorage.setItem('accessToken', data.access_token);
         localStorage.setItem('idToken', data.id_token);
-        updateLoggedInUI(data.access_token, data.id_token);
+        accessTokenDisplay.textContent = data.access_token;
+        idTokenDisplay.textContent = data.id_token;
+        setLoggedInView(true);
         showMessage('Successfully obtained live tokens from OUP!', 'success');
 
     } catch (error) {
         console.error('Token exchange error:', error);
         showMessage(`Authentication failed: ${error.message}. Check your configuration and try again.`, 'error');
-        updateLoggedOutUI();
+        setLoggedInView(false);
     }
 }
 
@@ -185,7 +203,6 @@ function handleLogout() {
     sessionStorage.removeItem('pkce_code_verifier');
     
     const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
-    console.log("Logout URL:", logoutUrl);
     window.location.href = logoutUrl;
 }
 
@@ -252,8 +269,7 @@ async function getHubs(authenticated) {
 
 // --- Event Listeners and Initial Load Logic ---
 launchAppBtn.addEventListener('click', () => {
-    directorSection.classList.add('hidden');
-    appSection.classList.remove('hidden');
+    setAppView(true);
 });
 
 loginBtn.addEventListener('click', initiateLogin);
@@ -278,10 +294,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check if we should skip the director section and show the app section
     const urlParams = new URLSearchParams(window.location.search);
     if (localStorage.getItem('accessToken') || urlParams.get('code')) {
-        directorSection.classList.add('hidden');
-        appSection.classList.remove('hidden');
+        setAppView(true);
+    } else {
+        setAppView(false);
     }
-
+    
     const code = urlParams.get('code');
     const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
 
