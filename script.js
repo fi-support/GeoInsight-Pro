@@ -23,7 +23,6 @@ const jwtDisplaySection = document.getElementById('jwt-display-section');
 const hubCountDisplay = document.getElementById('hub-count');
 const hubsList = document.getElementById('hubs-list');
 
-
 // --- Configuration (Dynamically updated from inputs) ---
 let CLIENT_ID;
 let COGNITO_USER_POOL_DOMAIN;
@@ -105,6 +104,7 @@ function hideMessage() {
     messageContainer.classList.add('hidden');
 }
 
+// --- View State Logic ---
 function setAppView(isAppVisible) {
     if (isAppVisible) {
         directorSection.classList.add('hidden');
@@ -134,6 +134,7 @@ function setLoggedInView(isLoggedIn) {
         hubCountDisplay.textContent = '';
     }
 }
+
 
 // --- Core Authentication Flow ---
 async function initiateLogin() {
@@ -174,7 +175,7 @@ async function exchangeCodeForTokens(code, codeVerifier) {
     });
 
     try {
-        const response = await fetch(`https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`, {
+        const response = await fetch(OAUTH_TOKEN_ENDPOINT, {
             method: 'POST',
             mode: 'cors',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -316,8 +317,8 @@ document.addEventListener('DOMContentLoaded', () => {
     REDIRECT_URI = redirectUriInput.value;
     COGNITO_REGION = cognitoRegionInput.value;
     OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
-
-    // Check if we should show the app section based on URL or localStorage
+    
+    // Check if we should skip the director section and show the app section
     const urlParams = new URLSearchParams(window.location.search);
     if (localStorage.getItem('accessToken') || urlParams.get('code')) {
         setAppView(true);
