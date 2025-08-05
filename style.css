@@ -26,13 +26,12 @@ body {
 }
 /* Left panel styling */
 .left-panel {
+    border-right: 1px solid #e2e8f0; /* Separator line */
     padding-right: 40px;
-    background-color: #ffffff; /* White background for left panel */
 }
 /* Right panel styling */
 .right-panel {
     padding-left: 40px;
-    background-color: #ffffff; /* White background for right panel */
 }
 /* Base button styling */
 .btn {
