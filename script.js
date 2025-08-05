@@ -166,9 +166,11 @@ function handleLogout() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('idToken');
     sessionStorage.removeItem('pkce_code_verifier');
-    const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
+
+    const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&logout_uri=${encodeURIComponent(REDIRECT_URI)}`;
     window.location.href = logoutUrl;
 }
+
 
 // --- API Calls ---
 async function getHubs(authenticated) {
