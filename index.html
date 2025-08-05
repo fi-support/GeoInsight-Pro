@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="p-4">
+<body>
     <div class="container">
         <div id="director-section" class="flex items-center justify-center min-h-[70vh]">
             <div class="card text-center">
@@ -54,6 +54,12 @@
                             <button id="call-private-api-btn" class="btn btn-api w-full">Get Authenticated Hubs</button>
                             <button id="logout-btn" class="btn btn-secondary w-full">Logout</button>
                         </div>
+                    </div>
+                    
+                    <div id="hub-list-section" class="mt-8">
+                        <h3 class="text-xl font-semibold mb-2">Connected Hubs</h3>
+                        <p id="hub-count" class="text-sm text-gray-600 mb-4"></p>
+                        <ul id="hubs-list" class="list-disc list-inside text-sm text-gray-800"></ul>
                     </div>
                 </div>
 
