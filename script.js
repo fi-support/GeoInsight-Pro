@@ -15,6 +15,7 @@ const idTokenDisplay = document.getElementById('id-token');
 const messageContainer = document.getElementById('message-container');
 const callPublicApiBtn = document.getElementById('call-public-api-btn');
 const callPrivateApiBtn = document.getElementById('call-private-api-btn');
+const manageBillingBtn = document.getElementById('manage-billing-btn');
 const apiResponseSection = document.getElementById('api-response-section');
 const apiRequestBox = document.getElementById('api-request-box');
 const apiResponseBox = document.getElementById('api-response-box');
@@ -23,19 +24,19 @@ const jwtDisplaySection = document.getElementById('jwt-display-section');
 const hubCountDisplay = document.getElementById('hub-count');
 const hubsList = document.getElementById('hubs-list');
 
-
 // --- Configuration (Dynamically updated from inputs) ---
 let CLIENT_ID;
 let COGNITO_USER_POOL_DOMAIN;
 let REDIRECT_URI;
 let COGNITO_REGION;
 const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
+const BILLING_COMPONENT_URL = "https://test-bim.clearly.app/bim"; // From conversation
 let OAUTH_TOKEN_ENDPOINT;
 
 // Default values for convenience
-const DEFAULT_CLIENT_ID = "";
+const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
 const DEFAULT_COGNITO_DOMAIN = "auth.clearly.app";
-const DEFAULT_REDIRECT_URI = "";
+const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
 const DEFAULT_COGNITO_REGION = "eu-central-1";
 
 // Update config variables when input fields change
@@ -115,7 +116,6 @@ function setAppView(isAppVisible) {
     }
 }
 
-
 function setLoggedInView(isLoggedIn) {
     if (isLoggedIn) {
         authSection.classList.add('hidden');
@@ -135,6 +135,7 @@ function setLoggedInView(isLoggedIn) {
         hubCountDisplay.textContent = '';
     }
 }
+
 
 // --- Core Authentication Flow ---
 async function initiateLogin() {
@@ -204,22 +205,13 @@ async function exchangeCodeForTokens(code, codeVerifier) {
 
 function handleLogout() {
     hideMessage();
-    // Clear local data
     localStorage.removeItem('accessToken');
     localStorage.removeItem('idToken');
     sessionStorage.removeItem('pkce_code_verifier');
-
-    // Show logged-out view (welcome page)
-    setLoggedInView(false);
-    setAppView(false);
-
-    // Optional: full Cognito logout to clear hosted UI session
-    // ⚠ Requires `logout_uri` not `redirect_uri`
-    const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&logout_uri=${encodeURIComponent(REDIRECT_URI)}`;
+    
+    const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
     window.location.href = logoutUrl;
 }
-
-
 
 async function getHubs(authenticated) {
     const accessToken = localStorage.getItem('accessToken');
@@ -272,10 +264,9 @@ async function getHubs(authenticated) {
             apiResponseBox.textContent = `--- Response ---\n${responseMessage}\n\n${JSON.stringify(data, null, 2)}`;
             showMessage('GraphQL query successful!', 'success');
             
-            // Update the hub list display on the left side
             const hubs = data?.data?.hubs?.results;
             if (hubs) {
-                hubsList.innerHTML = ''; // Clear existing list
+                hubsList.innerHTML = '';
                 if (hubs.length > 0) {
                     hubCountDisplay.textContent = `Total Hubs: ${hubs.length}`;
                     hubs.forEach(hub => {
@@ -303,6 +294,12 @@ async function getHubs(authenticated) {
     }
 }
 
+function handleManageBilling() {
+    // The Billing Component is a hosted UI. After login, we redirect the user to it.
+    const url = new URL(BILLING_COMPONENT_URL);
+    window.location.href = url.toString();
+}
+
 // --- Event Listeners and Initial Load Logic ---
 launchAppBtn.addEventListener('click', () => {
     setAppView(true);
@@ -312,6 +309,7 @@ loginBtn.addEventListener('click', initiateLogin);
 logoutBtn.addEventListener('click', handleLogout);
 callPublicApiBtn.addEventListener('click', () => getHubs(false));
 callPrivateApiBtn.addEventListener('click', () => getHubs(true));
+manageBillingBtn.addEventListener('click', handleManageBilling);
 
 document.addEventListener('DOMContentLoaded', () => {
     // Set default values for input fields from localStorage
@@ -327,7 +325,6 @@ document.addEventListener('DOMContentLoaded', () => {
     COGNITO_REGION = cognitoRegionInput.value;
     OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 
-    // Check if we should show the app section based on URL or localStorage
     const urlParams = new URLSearchParams(window.location.search);
     if (localStorage.getItem('accessToken') || urlParams.get('code')) {
         setAppView(true);
@@ -335,7 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setAppView(false);
     }
     
-    // Handle the redirect from Cognito
     const code = urlParams.get('code');
     const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
 
@@ -353,3 +349,9 @@ document.addEventListener('DOMContentLoaded', () => {
         showMessage('You are logged out. Please log in to get started.', 'info');
     }
 });
+
+// Save input values to localStorage when they change
+clientIdInput.addEventListener('change', (e) => localStorage.setItem('clientId', e.target.value));
+cognitoDomainInput.addEventListener('change', (e) => localStorage.setItem('cognitoUserPoolDomain', e.target.value));
+redirectUriInput.addEventListener('change', (e) => localStorage.setItem('redirectUri', e.target.value));
+cognitoRegionInput.addEventListener('change', (e) => localStorage.setItem('cognitoRegion', e.target.value));
