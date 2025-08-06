@@ -33,9 +33,9 @@ const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
 let OAUTH_TOKEN_ENDPOINT;
 
 // Default values for convenience
-const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
+const DEFAULT_CLIENT_ID = "";
 const DEFAULT_COGNITO_DOMAIN = "auth.clearly.app";
-const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
+const DEFAULT_REDIRECT_URI = "";
 const DEFAULT_COGNITO_REGION = "eu-central-1";
 
 // Update config variables when input fields change

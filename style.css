@@ -8,31 +8,47 @@ body {
     background-color: #f0f4f8;
     color: #334155;
 }
-/* Main container for the app */
+
+/* Main container for the app pages (NOT welcome page) */
 .container {
-    max-width: 1400px; /* Increased max-width for split screen */
+    max-width: 1400px;
     margin: 40px auto;
     padding: 30px;
     background-color: #ffffff;
+    width: 90%;
     border-radius: 12px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+                0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
+
+/* Welcome page section – full centering */
+#director-section {
+    display: flex;
+    align-items: center;       /* Vertical center */
+    justify-content: center;   /* Horizontal center */
+    min-height: 70vh;
+    padding: 40px;
+}
+
 /* Two-column layout for the app section */
 .split-screen {
     display: grid;
-    grid-template-columns: 1fr 2fr; /* Left panel takes 1/3, right takes 2/3 */
+    grid-template-columns: 1fr 2fr; /* Left panel 1/3, right 2/3 */
     gap: 40px;
-    min-height: 70vh; /* Ensure some vertical space */
+    min-height: 70vh;
 }
+
 /* Left panel styling */
 .left-panel {
-    border-right: 1px solid #e2e8f0; /* Separator line */
+    border-right: 1px solid #e2e8f0;
     padding-right: 40px;
 }
+
 /* Right panel styling */
 .right-panel {
     padding-left: 40px;
 }
+
 /* Base button styling */
 .btn {
     padding: 12px 24px;
@@ -41,6 +57,7 @@ body {
     transition: all 0.2s ease-in-out;
     cursor: pointer;
 }
+
 /* Primary button styling (Login) */
 .btn-primary {
     background-color: #3b82f6;
@@ -51,6 +68,7 @@ body {
     background-color: #2563eb;
     transform: translateY(-2px);
 }
+
 /* Secondary button styling (Logout) */
 .btn-secondary {
     background-color: #ef4444;
@@ -61,6 +79,7 @@ body {
     background-color: #dc2626;
     transform: translateY(-2px);
 }
+
 /* API Call button */
 .btn-api {
     background-color: #10b981;
@@ -71,7 +90,8 @@ body {
     background-color: #059669;
     transform: translateY(-2px);
 }
-/* Custom message box for alerts/info (instead of alert()) */
+
+/* Custom message box for alerts/info */
 .message-box {
     padding: 16px;
     border-radius: 8px;
@@ -83,6 +103,7 @@ body {
     border: 1px solid #93c5fd;
     color: #1e40af;
 }
+
 /* Styling for displaying tokens */
 .token-display {
     background-color: #f8fafc;
@@ -106,6 +127,7 @@ body {
     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
     overflow-x: auto;
 }
+
 /* Styling for API response box */
 .api-response-box {
     padding: 16px;
@@ -116,13 +138,15 @@ body {
     white-space: pre-wrap;
     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
 }
+
 /* Card for director section */
 .card {
     max-width: 600px;
     padding: 40px;
     background-color: #ffffff;
     border-radius: 12px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+                0 4px 6px -2px rgba(0, 0, 0, 0.05);
     text-align: center;
 }
 
