@@ -220,6 +220,7 @@ function handleManageBilling() {
         return;
     }
     
+    // The Billing Component is a hosted UI. After login, we redirect the user to it.
     const payload = btoa(JSON.stringify({
         actions: ["SELECT_SUBSCRIPTION"],
         origin: REDIRECT_URI,
