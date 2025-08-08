@@ -30,7 +30,7 @@ let COGNITO_USER_POOL_DOMAIN;
 let REDIRECT_URI;
 let COGNITO_REGION;
 const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
-const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
+const BASE_COMPONENT_URL = "https://test-hub.clearly.app/components/";
 let OAUTH_TOKEN_ENDPOINT;
 
 // Default values for convenience
@@ -209,7 +209,7 @@ function handleLogout() {
     localStorage.removeItem('idToken');
     sessionStorage.removeItem('pkce_code_verifier');
     
-    const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
+    const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&logout_uri=${encodeURIComponent(REDIRECT_URI)}`;
     window.location.href = logoutUrl;
 }
 
@@ -220,7 +220,6 @@ function handleManageBilling() {
         return;
     }
     
-    // The Billing Component is a hosted UI. After login, we redirect the user to it.
     const payload = btoa(JSON.stringify({
         actions: ["SELECT_SUBSCRIPTION"],
         origin: REDIRECT_URI,
