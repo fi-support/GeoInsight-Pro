@@ -30,7 +30,7 @@ let COGNITO_USER_POOL_DOMAIN;
 let REDIRECT_URI;
 let COGNITO_REGION;
 const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
-const BILLING_COMPONENT_URL = "https://test-bim.clearly.app/bim"; // From conversation
+const BASE_COMPONENT_URL = "https://test-hub.clearly.app/components/";
 let OAUTH_TOKEN_ENDPOINT;
 
 // Default values for convenience
@@ -213,6 +213,24 @@ function handleLogout() {
     window.location.href = logoutUrl;
 }
 
+function handleManageBilling() {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+        showMessage('You must be logged in to manage your subscription. Please log in first.', 'error');
+        return;
+    }
+    
+    const payload = btoa(JSON.stringify({
+        actions: ["SELECT_SUBSCRIPTION"],
+        origin: REDIRECT_URI,
+        client_id: CLIENT_ID,
+    }));
+
+    const billingUrl = `${BASE_COMPONENT_URL}${payload}`;
+    showMessage('Redirecting to the Clearly.Hub Billing Component...', 'info');
+    window.location.href = billingUrl;
+}
+
 async function getHubs(authenticated) {
     const accessToken = localStorage.getItem('accessToken');
     const headers = { 'Content-Type': 'application/json' };
@@ -292,12 +310,6 @@ async function getHubs(authenticated) {
         hubsList.innerHTML = '';
         hubCountDisplay.textContent = 'Failed to load hubs.';
     }
-}
-
-function handleManageBilling() {
-    // The Billing Component is a hosted UI. After login, we redirect the user to it.
-    const url = new URL(BILLING_COMPONENT_URL);
-    window.location.href = url.toString();
 }
 
 // --- Event Listeners and Initial Load Logic ---
