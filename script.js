@@ -30,7 +30,7 @@ let COGNITO_USER_POOL_DOMAIN;
 let REDIRECT_URI;
 let COGNITO_REGION;
 const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
-const BASE_COMPONENT_URL = "https://test-hub.clearly.app/components/";
+const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
 let OAUTH_TOKEN_ENDPOINT;
 
 // Default values for convenience
