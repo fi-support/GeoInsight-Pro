@@ -226,7 +226,7 @@ function handleManageBilling() {
         client_id: CLIENT_ID,
     }));
 
-    const billingUrl = `${BASE_COMPONENT_URL}${payload}`;
+    const billingUrl = `${BASE_COMPONENT_URL}/components/${payload}`;
     showMessage('Redirecting to the Clearly.Hub Billing Component...', 'info');
     window.location.href = billingUrl;
 }
