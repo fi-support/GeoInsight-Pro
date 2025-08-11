@@ -39,6 +39,29 @@ const DEFAULT_COGNITO_DOMAIN = "auth.clearly.app";
 const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
 const DEFAULT_COGNITO_REGION = "eu-central-1";
 
+// Fetch subscription definition via GraphQL
+async function fetchSubscriptionDefinition(id, subscriptionValidationInput, accessToken) {
+  const query = `
+    query SubscriptionDefinition($subscriptionValidationInput: SubscriptionValidationInput!, $id: String!) {
+      subscriptionDefinition(subscriptionValidationInput: $subscriptionValidationInput, id: $id) {
+        _id
+        name
+        numberOfAllowedProjects
+        numberOfAllowedModels
+        idsChecks
+        complianceChecks
+        publishToClearlyHub
+        exportModel
+      }
+    }
+  `;
+
+  const variables = {
+    subscriptionValidationInput,
+    id //either client id or hub id
+  };
+
+
 // Update config variables when input fields change
 clientIdInput.addEventListener('input', (e) => localStorage.setItem('clientId', e.target.value));
 cognitoDomainInput.addEventListener('input', (e) => {
@@ -195,6 +218,7 @@ async function exchangeCodeForTokens(code, codeVerifier) {
         idTokenDisplay.textContent = data.id_token;
         setLoggedInView(true);
         showMessage('Successfully obtained live tokens from OUP!', 'success');
+        await getUserSubscriptions();
 
     } catch (error) {
         console.error('Token exchange error:', error);
@@ -312,6 +336,64 @@ async function getHubs(authenticated) {
     }
 }
 
+async function getUserSubscriptions() {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+        showMessage('You must be logged in to view subscriptions.', 'error');
+        return;
+    }
+
+    const query = `
+        query GetUserSubscriptions {
+            userSubscriptions {
+                id
+                name
+                status
+            }
+        }
+    `;
+
+    const requestBody = { query };
+
+    try {
+        showMessage('Fetching your subscriptions...', 'info');
+        const response = await fetch(GRAPHQL_ENDPOINT, {
+            method: 'POST',
+            mode: 'cors',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.errors ? data.errors.map(e => e.message).join(', ') : 'Failed to fetch subscriptions');
+        }
+
+        // Display subscriptions or prompt user to choose one
+        const subscriptions = data?.data?.userSubscriptions;
+        if (subscriptions && subscriptions.length > 0) {
+            let subscriptionList = subscriptions.map(sub => `${sub.name} (Status: ${sub.status})`).join('\n');
+            showMessage(`Your subscriptions:\n${subscriptionList}`, 'success');
+
+            // Here you can implement UI logic to let user select a subscription
+            // For now, just log to console:
+            console.log('User subscriptions:', subscriptions);
+
+        } else {
+            showMessage('No subscriptions found. Please choose a subscription.', 'info');
+            // Trigger UI to select subscription or redirect user to subscription page
+        }
+
+    } catch (error) {
+        console.error('Subscription fetch error:', error);
+        showMessage(`Failed to fetch subscriptions: ${error.message}`, 'error');
+    }
+}
+
 // --- Event Listeners and Initial Load Logic ---
 launchAppBtn.addEventListener('click', () => {
     setAppView(true);
@@ -356,6 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
         idTokenDisplay.textContent = localStorage.getItem('idToken');
         setLoggedInView(true);
         showMessage('You are already logged in.', 'info');
+        getUserSubscriptions();
     } else {
         setLoggedInView(false);
         showMessage('You are logged out. Please log in to get started.', 'info');
