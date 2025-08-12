@@ -41,10 +41,19 @@ const DEFAULT_APP_NAME = "IAM Test";
 const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
 const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
 
-// Update config variables on input changes
-clientIdInput.addEventListener('input', (e) => localStorage.setItem('clientId', e.target.value));
-redirectUriInput.addEventListener('input', (e) => localStorage.setItem('redirectUri', e.target.value));
-appNameInput.addEventListener('input', (e) => localStorage.setItem('appName', e.target.value));
+// Update config variables on input changes and save to local storage
+clientIdInput.addEventListener('input', (e) => {
+    CLIENT_ID = e.target.value;
+    localStorage.setItem('clientId', CLIENT_ID);
+});
+redirectUriInput.addEventListener('input', (e) => {
+    REDIRECT_URI = e.target.value;
+    localStorage.setItem('redirectUri', REDIRECT_URI);
+});
+appNameInput.addEventListener('input', (e) => {
+    APP_NAME = e.target.value;
+    localStorage.setItem('appName', APP_NAME);
+});
 
 // --- PKCE Helper Functions ---
 function generateRandomString(length) {
@@ -463,7 +472,6 @@ function handleManageBilling() {
 // --- Event Listeners and Initial Load Logic ---
 launchAppBtn.addEventListener('click', () => {
     setAppView(true);
-    launchExternalApp(APP_NAME_FOR_BILLING);
 });
 
 loginBtn.addEventListener('click', initiateLogin);
@@ -473,7 +481,7 @@ callPrivateApiBtn.addEventListener('click', () => getHubs(true));
 manageBillingBtn.addEventListener('click', handleManageBilling);
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Set default values for input fields from localStorage
+    // Set default values for input fields from localStorage or predefined defaults
     clientIdInput.value = localStorage.getItem('clientId') || DEFAULT_CLIENT_ID;
     appNameInput.value = localStorage.getItem('appName') || DEFAULT_APP_NAME;
     redirectUriInput.value = localStorage.getItem('redirectUri') || DEFAULT_REDIRECT_URI;
@@ -508,8 +516,3 @@ document.addEventListener('DOMContentLoaded', () => {
         showMessage('You are logged out. Please log in to get started.', 'info');
     }
 });
-
-// Save input values to localStorage when they change
-clientIdInput.addEventListener('change', (e) => localStorage.setItem('clientId', e.target.value));
-appNameInput.addEventListener('change', (e) => localStorage.setItem('appName', e.target.value));
-redirectUriInput.addEventListener('change', (e) => localStorage.setItem('redirectUri', e.target.value));
