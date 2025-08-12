@@ -471,21 +471,22 @@ async function launchExternalApp(appName) {
             return;
         }
 
-        // --- NEW: Add a visual confirmation that the subscription check passed ---
-        // This message will be briefly visible before the app launches
-        showMessage('Subscription found. Launching app...', 'success');
+        // --- UI VERIFICATION LOGIC ---
+        // This block runs only if a subscription is found.
+        const subscriptionName = subscription.name;
+        showMessage(`Subscription found: ${subscriptionName}. Launching app...`, 'success');
         
-        // --- NEW: A brief delay to allow the user to see the message ---
-        // This is a good practice for user feedback
+        // Add a small delay to allow the user to read the message
         setTimeout(() => {
             window.location.href = app.launchUrl;
-        }, 1500); // 1.5 second delay
+        }, 4000); // 4-second delay
 
     } catch (error) {
         console.error("Error launching external app:", error);
         showMessage(`Error launching external app: ${error.message}. Check the console for details.`, 'error');
     }
 }
+
 
 function handleManageBilling() {
     const accessToken = localStorage.getItem('accessToken');
