@@ -339,7 +339,6 @@ async function getUserSubscriptions() {
         query GetUserSubscriptions($appOrClientId: String!) {
             myAppSubscriptions(appOrClientId: $appOrClientId) {
                 userAppSubscriptions {
-                    id
                     subscriptionModels {
                         name
                         type
