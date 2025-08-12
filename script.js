@@ -36,6 +36,11 @@ const COGNITO_USER_POOL_DOMAIN = "auth.clearly.app";
 const COGNITO_REGION = "eu-central-1";
 const OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 
+// Defaults
+const DEFAULT_APP_NAME = "IAM Test";
+const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
+const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
+
 // Update config variables on input changes
 clientIdInput.addEventListener('input', (e) => localStorage.setItem('clientId', e.target.value));
 redirectUriInput.addEventListener('input', (e) => localStorage.setItem('redirectUri', e.target.value));
