@@ -3,9 +3,8 @@ const directorSection = document.getElementById('director-section');
 const appSection = document.getElementById('app-section');
 const launchAppBtn = document.getElementById('launch-app-btn');
 const clientIdInput = document.getElementById('clientIdInput');
-const cognitoDomainInput = document.getElementById('cognitoDomainInput');
+const appNameInput = document.getElementById('appNameInput');
 const redirectUriInput = document.getElementById('redirectUriInput');
-const cognitoRegionInput = document.getElementById('cognitoRegionInput');
 const loginBtn = document.getElementById('login-btn');
 const logoutBtn = document.getElementById('logout-btn');
 const authSection = document.getElementById('auth-section');
@@ -26,28 +25,31 @@ const hubsList = document.getElementById('hubs-list');
 
 // --- Configuration (Dynamically updated from inputs) ---
 let CLIENT_ID;
-let COGNITO_USER_POOL_DOMAIN;
 let REDIRECT_URI;
-let COGNITO_REGION;
+let APP_NAME;
 const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
 const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
-let OAUTH_TOKEN_ENDPOINT;
 const APP_NAME_FOR_BILLING = "Testing IAM";
 
-// Default values for convenience
-const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
-const DEFAULT_COGNITO_DOMAIN = "auth.clearly.app";
-const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
-const DEFAULT_COGNITO_REGION = "eu-central-1";
+// Constants
+const COGNITO_USER_POOL_DOMAIN = "auth.clearly.app";
+const COGNITO_REGION = "eu-central-1";
+const OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 
-// Update config variables when input fields change
-clientIdInput.addEventListener('input', (e) => localStorage.setItem('clientId', e.target.value));
-cognitoDomainInput.addEventListener('input', (e) => {
-    localStorage.setItem('cognitoUserPoolDomain', e.target.value);
-    OAUTH_TOKEN_ENDPOINT = `https://${e.target.value}/oauth2/token`;
+
+// Update config variables on input changes
+clientIdInput.addEventListener('input', (e) => {
+    CLIENT_ID = e.target.value;
+    localStorage.setItem('clientId', CLIENT_ID);
 });
-redirectUriInput.addEventListener('input', (e) => localStorage.setItem('redirectUri', e.target.value));
-cognitoRegionInput.addEventListener('input', (e) => localStorage.setItem('cognitoRegion', e.target.value));
+redirectUriInput.addEventListener('input', (e) => {
+    REDIRECT_URI = e.target.value;
+    localStorage.setItem('redirectUri', REDIRECT_URI);
+});
+appNameInput.addEventListener('input', (e) => {
+    APP_NAME = e.target.value;
+    localStorage.setItem('appName', APP_NAME);
+});
 
 // --- PKCE Helper Functions ---
 function generateRandomString(length) {
@@ -107,7 +109,6 @@ function hideMessage() {
     messageContainer.classList.add('hidden');
 }
 
-// --- View State Logic ---
 function setAppView(isAppVisible) {
     if (isAppVisible) {
         directorSection.classList.add('hidden');
@@ -142,7 +143,7 @@ function setLoggedInView(isLoggedIn) {
 // --- Core Authentication Flow ---
 async function initiateLogin() {
     hideMessage();
-    if (!CLIENT_ID || !COGNITO_USER_POOL_DOMAIN || !REDIRECT_URI) {
+    if (!CLIENT_ID || !REDIRECT_URI) {
         showMessage('Please fill in all OUP IAM Configuration fields.', 'error');
         return;
     }
@@ -215,22 +216,26 @@ function handleLogout() {
     window.location.href = logoutUrl;
 }
 
-function handleManageBilling() {
-    const accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) {
-        showMessage('You must be logged in to manage your subscription. Please log in first.', 'error');
-        return;
+// --- GraphQL Helper Functions ---
+async function graphqlRequest(query, variables = {}) {
+    const token = localStorage.getItem("accessToken");
+    const headers = { "Content-Type": "application/json" };
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
     }
-    
-    const payload = btoa(JSON.stringify({
-        actions: ["SELECT_SUBSCRIPTION"],
-        origin: REDIRECT_URI,
-        client_id: CLIENT_ID,
-    }));
 
-    const billingUrl = `${BASE_COMPONENT_URL}${payload}`;
-    showMessage('Redirecting to the Clearly.Hub Billing Component...', 'info');
-    window.location.href = billingUrl;
+    const response = await fetch(GRAPHQL_ENDPOINT, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify({ query, variables }),
+    });
+
+    const result = await response.json();
+    if (result.errors) {
+        console.error("GraphQL Error:", result.errors);
+        throw new Error(result.errors[0].message);
+    }
+    return result.data;
 }
 
 async function getHubs(authenticated) {
@@ -366,7 +371,6 @@ async function getUserSubscriptions() {
     }
 }
 
-// Step 1: Get the internal app ID from the Applications list
 async function getAppIdByName(appName) {
     const query = `
         query GetApplications {
@@ -383,7 +387,6 @@ async function getAppIdByName(appName) {
     return app;
 }
 
-// Step 2: Validate subscription for this app
 async function checkSubscription(appId) {
     const query = `
         query SubscriptionDefinition(
@@ -415,7 +418,6 @@ async function checkSubscription(appId) {
     return data.subscriptionDefinition;
 }
 
-// Step 3: Launch app or redirect to billing
 async function launchExternalApp(appName) {
     hideMessage();
     showMessage('Checking your subscription...', 'info');
@@ -444,6 +446,24 @@ async function launchExternalApp(appName) {
     }
 }
 
+function handleManageBilling() {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+        showMessage('You must be logged in to manage your subscription. Please log in first.', 'error');
+        return;
+    }
+    
+    const payload = btoa(JSON.stringify({
+        actions: ["SELECT_SUBSCRIPTION"],
+        origin: REDIRECT_URI,
+        client_id: CLIENT_ID,
+    }));
+
+    const billingUrl = `${BASE_COMPONENT_URL}${payload}`;
+    showMessage('Redirecting to the Clearly.Hub Billing Component...', 'info');
+    window.location.href = billingUrl;
+}
+
 // --- Event Listeners and Initial Load Logic ---
 launchAppBtn.addEventListener('click', () => {
     setAppView(true);
@@ -458,16 +478,13 @@ manageBillingBtn.addEventListener('click', handleManageBilling);
 document.addEventListener('DOMContentLoaded', () => {
     // Set default values for input fields from localStorage
     clientIdInput.value = localStorage.getItem('clientId') || DEFAULT_CLIENT_ID;
-    cognitoDomainInput.value = localStorage.getItem('cognitoUserPoolDomain') || DEFAULT_COGNITO_DOMAIN;
+    appNameInput.value = localStorage.getItem('appName') || DEFAULT_APP_NAME;
     redirectUriInput.value = localStorage.getItem('redirectUri') || DEFAULT_REDIRECT_URI;
-    cognitoRegionInput.value = localStorage.getItem('cognitoRegion') || DEFAULT_COGNITO_REGION;
-
+    
     // Update global variables with the loaded values
     CLIENT_ID = clientIdInput.value;
-    COGNITO_USER_POOL_DOMAIN = cognitoDomainInput.value;
     REDIRECT_URI = redirectUriInput.value;
-    COGNITO_REGION = cognitoRegionInput.value;
-    OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
+    APP_NAME = appNameInput.value;
 
     const urlParams = new URLSearchParams(window.location.search);
     if (localStorage.getItem('accessToken') || urlParams.get('code')) {
@@ -488,6 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
         idTokenDisplay.textContent = localStorage.getItem('idToken');
         setLoggedInView(true);
         showMessage('You are already logged in.', 'info');
+        getUserSubscriptions();
     } else {
         setLoggedInView(false);
         showMessage('You are logged out. Please log in to get started.', 'info');
@@ -496,6 +514,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Save input values to localStorage when they change
 clientIdInput.addEventListener('change', (e) => localStorage.setItem('clientId', e.target.value));
-cognitoDomainInput.addEventListener('change', (e) => localStorage.setItem('cognitoUserPoolDomain', e.target.value));
+appNameInput.addEventListener('change', (e) => localStorage.setItem('appName', e.target.value));
 redirectUriInput.addEventListener('change', (e) => localStorage.setItem('redirectUri', e.target.value));
-cognitoRegionInput.addEventListener('change', (e) => localStorage.setItem('cognitoRegion', e.target.value));
