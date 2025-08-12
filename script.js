@@ -347,7 +347,7 @@ async function getUserSubscriptions() {
                 }
             }
         }
-    `;
+    `; 
 
     // Pass the appOrClientId variable in the request.
     const requestBody = { 
