@@ -331,24 +331,37 @@ async function getUserSubscriptions() {
         return;
     }
 
-    // You need to get the CLIENT_ID from your configuration.
+    // Use the CLIENT_ID from your app's configuration
     const appOrClientId = CLIENT_ID; 
 
-    // Corrected query using 'myAppSubscriptions' and a variable.
+    // This is the correct GraphQL query from your codebase
     const query = `
-        query GetUserSubscriptions($appOrClientId: String!) {
+        query MyAppSubscriptions($appOrClientId: String!) {
             myAppSubscriptions(appOrClientId: $appOrClientId) {
+                _id
                 userAppSubscriptions {
-                    subscriptionModels {
+                    subscribedByHub {
                         name
+                        _id
                         type
+                    }
+                    subscriptionModels {
+                        _id
+                        name
+                        quantity
+                        amount
+                        customUnit
+                        type
+                        paymentModel
+                        ownerHubId
+                        stripePrices
+                        externalReference
                     }
                 }
             }
         }
-    `; 
+    `;
 
-    // Pass the appOrClientId variable in the request.
     const requestBody = { 
         query, 
         variables: { appOrClientId } 
@@ -371,11 +384,13 @@ async function getUserSubscriptions() {
         if (!response.ok) {
             throw new Error(data.errors ? data.errors.map(e => e.message).join(', ') : 'Failed to fetch subscriptions');
         }
-
+        
+        // Adjust the data parsing to match the new query structure
         const subscriptions = data?.data?.myAppSubscriptions?.userAppSubscriptions;
+        
         if (subscriptions && subscriptions.length > 0) {
             let subscriptionList = subscriptions.map(sub => 
-                `${sub.subscriptionModels[0].name} (ID: ${sub._id})`
+                `Hub: ${sub.subscribedByHub.name} | Subscription Model: ${sub.subscriptionModels[0].name}`
             ).join('\n');
             showMessage(`Your subscriptions:\n${subscriptionList}`, 'success');
             console.log('User subscriptions:', subscriptions);
@@ -388,6 +403,7 @@ async function getUserSubscriptions() {
         showMessage(`Failed to fetch subscriptions: ${error.message}`, 'error');
     }
 }
+
 
 async function getAppIdByName(appName) {
     const query = `
