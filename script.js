@@ -36,20 +36,10 @@ const COGNITO_USER_POOL_DOMAIN = "auth.clearly.app";
 const COGNITO_REGION = "eu-central-1";
 const OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 
-
 // Update config variables on input changes
-clientIdInput.addEventListener('input', (e) => {
-    CLIENT_ID = e.target.value;
-    localStorage.setItem('clientId', CLIENT_ID);
-});
-redirectUriInput.addEventListener('input', (e) => {
-    REDIRECT_URI = e.target.value;
-    localStorage.setItem('redirectUri', REDIRECT_URI);
-});
-appNameInput.addEventListener('input', (e) => {
-    APP_NAME = e.target.value;
-    localStorage.setItem('appName', APP_NAME);
-});
+clientIdInput.addEventListener('input', (e) => localStorage.setItem('clientId', e.target.value));
+redirectUriInput.addEventListener('input', (e) => localStorage.setItem('redirectUri', e.target.value));
+appNameInput.addEventListener('input', (e) => localStorage.setItem('appName', e.target.value));
 
 // --- PKCE Helper Functions ---
 function generateRandomString(length) {
@@ -179,7 +169,7 @@ async function exchangeCodeForTokens(code, codeVerifier) {
     });
 
     try {
-        const response = await fetch(`https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`, {
+        const response = await fetch(OAUTH_TOKEN_ENDPOINT, {
             method: 'POST',
             mode: 'cors',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -198,6 +188,7 @@ async function exchangeCodeForTokens(code, codeVerifier) {
         idTokenDisplay.textContent = data.id_token;
         setLoggedInView(true);
         showMessage('Successfully obtained live tokens from OUP!', 'success');
+        await getUserSubscriptions();
 
     } catch (error) {
         console.error('Token exchange error:', error);
@@ -467,6 +458,7 @@ function handleManageBilling() {
 // --- Event Listeners and Initial Load Logic ---
 launchAppBtn.addEventListener('click', () => {
     setAppView(true);
+    launchExternalApp(APP_NAME_FOR_BILLING);
 });
 
 loginBtn.addEventListener('click', initiateLogin);
