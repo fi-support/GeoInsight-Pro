@@ -442,8 +442,15 @@ async function launchExternalApp(appName) {
             return;
         }
 
+        // --- NEW: Add a visual confirmation that the subscription check passed ---
+        // This message will be briefly visible before the app launches
         showMessage('Subscription found. Launching app...', 'success');
-        window.location.href = app.launchUrl;
+        
+        // --- NEW: A brief delay to allow the user to see the message ---
+        // This is a good practice for user feedback
+        setTimeout(() => {
+            window.location.href = app.launchUrl;
+        }, 1500); // 1.5 second delay
 
     } catch (error) {
         console.error("Error launching external app:", error);
