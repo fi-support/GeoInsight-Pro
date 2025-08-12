@@ -331,17 +331,29 @@ async function getUserSubscriptions() {
         return;
     }
 
+    // You need to get the CLIENT_ID from your configuration.
+    const appOrClientId = CLIENT_ID; 
+
+    // Corrected query using 'myAppSubscriptions' and a variable.
     const query = `
-        query GetUserSubscriptions {
-            userSubscriptions {
-                id
-                name
-                status
+        query GetUserSubscriptions($appOrClientId: String!) {
+            myAppSubscriptions(appOrClientId: $appOrClientId) {
+                userAppSubscriptions {
+                    _id
+                    subscriptionModels {
+                        name
+                        type
+                    }
+                }
             }
         }
     `;
 
-    const requestBody = { query };
+    // Pass the appOrClientId variable in the request.
+    const requestBody = { 
+        query, 
+        variables: { appOrClientId } 
+    };
 
     try {
         showMessage('Fetching your subscriptions...', 'info');
@@ -361,13 +373,15 @@ async function getUserSubscriptions() {
             throw new Error(data.errors ? data.errors.map(e => e.message).join(', ') : 'Failed to fetch subscriptions');
         }
 
-        const subscriptions = data?.data?.userSubscriptions;
+        const subscriptions = data?.data?.myAppSubscriptions?.userAppSubscriptions;
         if (subscriptions && subscriptions.length > 0) {
-            let subscriptionList = subscriptions.map(sub => `${sub.name} (Status: ${sub.status})`).join('\n');
+            let subscriptionList = subscriptions.map(sub => 
+                `${sub.subscriptionModels[0].name} (ID: ${sub._id})`
+            ).join('\n');
             showMessage(`Your subscriptions:\n${subscriptionList}`, 'success');
             console.log('User subscriptions:', subscriptions);
         } else {
-            showMessage('No subscriptions found. Please choose a subscription.', 'info');
+            showMessage('No subscriptions found for this app.', 'info');
         }
 
     } catch (error) {
