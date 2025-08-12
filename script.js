@@ -56,11 +56,12 @@ async function fetchSubscriptionDefinition(id, subscriptionValidationInput, acce
     }
   `;
 
+
   const variables = {
     subscriptionValidationInput,
     id //either client id or hub id
   };
-
+}
 
 // Update config variables when input fields change
 clientIdInput.addEventListener('input', (e) => localStorage.setItem('clientId', e.target.value));
