@@ -4,9 +4,7 @@ const appSection = document.getElementById('app-section');
 const launchAppBtn = document.getElementById('launch-app-btn');
 const clientIdInput = document.getElementById('clientIdInput');
 const appNameInput = document.getElementById('appNameInput');
-//const cognitoDomainInput = document.getElementById('cognitoDomainInput');
 const redirectUriInput = document.getElementById('redirectUriInput');
-//const cognitoRegionInput = document.getElementById('cognitoRegionInput');
 const loginBtn = document.getElementById('login-btn');
 const logoutBtn = document.getElementById('logout-btn');
 const authSection = document.getElementById('auth-section');
@@ -25,34 +23,37 @@ const jwtDisplaySection = document.getElementById('jwt-display-section');
 const hubCountDisplay = document.getElementById('hub-count');
 const hubsList = document.getElementById('hubs-list');
 
-// --- Configuration (Dynamically updated from inputs) ---
-let CLIENT_ID;
-let REDIRECT_URI;
-let APP_NAME;
+// --- Configuration ---
+let CLIENT_ID = localStorage.getItem('clientId') || "4u2og3j1vr8p8a4at1cl3jklbn";
+let REDIRECT_URI = localStorage.getItem('redirectUri') || "https://simaybtm.github.io/hub_externalapps/";
+let APP_NAME = localStorage.getItem('appName') || "IAM Test";
+
 const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
 const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
-let OAUTH_TOKEN_ENDPOINT;
 const APP_NAME_FOR_BILLING = "Testing IAM";
 
-// Default values for convenience
-const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
-const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
-const DEFAULT_APP_NAME = "IAM Test";
-
-// Constants
 const COGNITO_USER_POOL_DOMAIN = "auth.clearly.app";
 const COGNITO_REGION = "eu-central-1";
-OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
+const OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 
+// Initialize input fields with saved/default values
+clientIdInput.value = CLIENT_ID;
+redirectUriInput.value = REDIRECT_URI;
+appNameInput.value = APP_NAME;
 
-// Update config variables when input fields change
-clientIdInput.addEventListener('input', (e) => localStorage.setItem('clientId', e.target.value));
-cognitoDomainInput.addEventListener('input', (e) => {
-    localStorage.setItem('cognitoUserPoolDomain', e.target.value);
-    OAUTH_TOKEN_ENDPOINT = `https://${e.target.value}/oauth2/token`;
+// --- Update config variables on input changes ---
+clientIdInput.addEventListener('input', (e) => {
+    CLIENT_ID = e.target.value;
+    localStorage.setItem('clientId', CLIENT_ID);
 });
-redirectUriInput.addEventListener('input', (e) => localStorage.setItem('redirectUri', e.target.value));
-cognitoRegionInput.addEventListener('input', (e) => localStorage.setItem('cognitoRegion', e.target.value));
+redirectUriInput.addEventListener('input', (e) => {
+    REDIRECT_URI = e.target.value;
+    localStorage.setItem('redirectUri', REDIRECT_URI);
+});
+appNameInput.addEventListener('input', (e) => {
+    APP_NAME = e.target.value;
+    localStorage.setItem('appName', APP_NAME);
+});
 
 // --- PKCE Helper Functions ---
 function generateRandomString(length) {
@@ -145,7 +146,7 @@ function setLoggedInView(isLoggedIn) {
 // --- Core Authentication Flow ---
 async function initiateLogin() {
     hideMessage();
-    if (!CLIENT_ID || !COGNITO_USER_POOL_DOMAIN || !REDIRECT_URI) {
+    if (!CLIENT_ID || !APP_NAME || !REDIRECT_URI) {
         showMessage('Please fill in all OUP IAM Configuration fields.', 'error');
         return;
     }
@@ -157,12 +158,12 @@ async function initiateLogin() {
     sessionStorage.setItem('pkce_code_verifier', codeVerifier);
 
     const authUrl = `https://${cleanDomain}/oauth2/authorize?` +
-                   `response_type=code&` +
-                   `client_id=${CLIENT_ID}&` +
-                   `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
-                   `scope=openid+profile+email&` +
-                   `code_challenge=${codeChallenge}&` +
-                   `code_challenge_method=S256`;
+        `response_type=code&` +
+        `client_id=${CLIENT_ID}&` +
+        `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+        `scope=openid+profile+email&` +
+        `code_challenge=${codeChallenge}&` +
+        `code_challenge_method=S256`;
 
     showMessage('Redirecting to OUP login page...', 'info');
     window.location.href = authUrl;
@@ -171,7 +172,7 @@ async function initiateLogin() {
 async function exchangeCodeForTokens(code, codeVerifier) {
     hideMessage();
     showMessage('Exchanging authorization code for tokens...', 'info');
-    
+
     const body = new URLSearchParams({
         grant_type: 'authorization_code',
         client_id: CLIENT_ID,
@@ -181,7 +182,7 @@ async function exchangeCodeForTokens(code, codeVerifier) {
     });
 
     try {
-        const response = await fetch(`https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`, {
+        const response = await fetch(OAUTH_TOKEN_ENDPOINT, {
             method: 'POST',
             mode: 'cors',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -214,309 +215,188 @@ function handleLogout() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('idToken');
     sessionStorage.removeItem('pkce_code_verifier');
-    
+
     const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&logout_uri=${encodeURIComponent(REDIRECT_URI)}`;
     window.location.href = logoutUrl;
 }
 
 // --- GraphQL Helper Functions ---
-// Use accessToken for authorization, as it is for API access
 async function graphqlRequest(query, variables = {}) {
     const token = localStorage.getItem("accessToken");
     const headers = { "Content-Type": "application/json" };
-    if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-    }
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const body = JSON.stringify({ query, variables });
 
     const response = await fetch(GRAPHQL_ENDPOINT, {
         method: "POST",
-        headers: headers,
-        body: JSON.stringify({ query, variables }),
+        headers,
+        body,
     });
-
-    const result = await response.json();
-    if (result.errors) {
-        console.error("GraphQL Error:", result.errors);
-        throw new Error(result.errors[0].message);
+    if (!response.ok) {
+        throw new Error(`GraphQL request failed: ${response.statusText}`);
     }
-    return result.data;
+    return response.json();
 }
 
-async function getHubs(authenticated) {
-    const accessToken = localStorage.getItem('accessToken');
-    const headers = { 'Content-Type': 'application/json' };
-    
-    const query = `query GetHubs($rootHubsOnly: Boolean) { hubs(rootHubsOnly: $rootHubsOnly) { results { ... on Hub { _id name findability type } } } }`;
-    const variables = {
-        rootHubsOnly: false
-    };
-    const requestBody = { query, variables };
-    
-    let responseMessage = "";
-    
-    if (authenticated) {
-        if (!accessToken) {
-            showMessage('No Access Token found. Please log in first.', 'error');
-            return;
-        }
-        headers['Authorization'] = `Bearer ${accessToken}`;
-        responseMessage = "This is a live API response from an authenticated hubs query. It returns all hubs you have access to.";
-    } else {
-        responseMessage = "This is a live API response from an unauthenticated hubs query. It only returns public hubs.";
-    }
-    
-    const requestDetails = `
-        URL: ${GRAPHQL_ENDPOINT}
-        Method: POST
-        Headers:
-            Content-Type: application/json
-            ${authenticated ? `Authorization: Bearer ${accessToken.substring(0, 10)}...` : ''}
-        Body:
-        ${JSON.stringify(requestBody, null, 2)}
-    `;
-
+// --- Subscription Check and App Launch ---
+async function getUserSubscriptions() {
     try {
-        showMessage(`Making ${authenticated ? 'authenticated' : 'public'} GraphQL query...`, 'info');
-        apiResponseSection.classList.remove('hidden');
-        apiRequestBox.textContent = `--- Request ---\n${requestDetails}`;
-        
-        const response = await fetch(GRAPHQL_ENDPOINT, {
-            method: 'POST',
-            mode: 'cors',
-            headers: headers,
-            body: JSON.stringify(requestBody)
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            apiResponseBox.textContent = `--- Response ---\n${responseMessage}\n\n${JSON.stringify(data, null, 2)}`;
-            showMessage('GraphQL query successful!', 'success');
-            
-            const hubs = data?.data?.hubs?.results;
-            if (hubs) {
-                hubsList.innerHTML = '';
-                if (hubs.length > 0) {
-                    hubCountDisplay.textContent = `Total Hubs: ${hubs.length}`;
-                    hubs.forEach(hub => {
-                        const listItem = document.createElement('li');
-                        listItem.textContent = `${hub.name} (${hub.findability})`;
-                        hubsList.appendChild(listItem);
-                    });
-                } else {
-                    hubCountDisplay.textContent = 'No hubs found.';
+        const query = `
+            query {
+                subscriptions {
+                    nodes {
+                        id
+                        displayName
+                        isActive
+                        product {
+                            id
+                            name
+                        }
+                    }
                 }
             }
-
-        } else {
-            apiResponseBox.textContent = `--- Error Response ---\n${JSON.stringify(data, null, 2)}`;
-            showMessage('GraphQL query failed. Check the console for details.', 'error');
-            hubsList.innerHTML = '';
-            hubCountDisplay.textContent = 'Failed to load hubs.';
-        }
-
-    } catch (error) {
-        console.error('API call error:', error);
-        showMessage(`API call failed: ${error.message}. Check the console for details.`, 'error');
-        hubsList.innerHTML = '';
-        hubCountDisplay.textContent = 'Failed to load hubs.';
-    }
-}
-
-async function getUserSubscriptions() {
-    const accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) {
-        showMessage('You must be logged in to view subscriptions.', 'error');
-        return;
-    }
-
-    const query = `
-        query GetUserSubscriptions {
-            userSubscriptions {
-                id
-                name
-                status
-            }
-        }
-    `;
-
-    const requestBody = { query };
-
-    try {
-        showMessage('Fetching your subscriptions...', 'info');
-        const response = await fetch(GRAPHQL_ENDPOINT, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
-            },
-            body: JSON.stringify(requestBody)
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.errors ? data.errors.map(e => e.message).join(', ') : 'Failed to fetch subscriptions');
-        }
-
-        const subscriptions = data?.data?.userSubscriptions;
-        if (subscriptions && subscriptions.length > 0) {
-            let subscriptionList = subscriptions.map(sub => `${sub.name} (Status: ${sub.status})`).join('\n');
-            showMessage(`Your subscriptions:\n${subscriptionList}`, 'success');
-            console.log('User subscriptions:', subscriptions);
-        } else {
-            showMessage('No subscriptions found. Please choose a subscription.', 'info');
-        }
-
-    } catch (error) {
-        console.error('Subscription fetch error:', error);
-        showMessage(`Failed to fetch subscriptions: ${error.message}`, 'error');
-    }
-}
-
-// Step 1: Get the internal app ID from the Applications list
-async function getAppIdByName(appName) {
-    const query = `
-        query GetApplications {
-            applications {
-                _id
-                name
-                launchUrl
-            }
-        }
-    `;
-    const data = await graphqlRequest(query);
-    const app = data.applications.find(a => a.name === appName);
-    if (!app) throw new Error(`App '${appName}' not found`);
-    return app;
-}
-
-// Step 2: Validate subscription for this app
-async function checkSubscription(appId) {
-    const query = `
-        query SubscriptionDefinition(
-            $subscriptionValidationInput: SubscriptionValidationInput!
-            $id: String!
-        ) {
-            subscriptionDefinition(
-                subscriptionValidationInput: $subscriptionValidationInput
-                id: $id
-            ) {
-                _id
-                name
-                numberOfAllowedProjects
-                numberOfAllowedModels
-                publishToClearlyHub
-                exportModel
-            }
-        }
-    `;
-
-    const variables = {
-        subscriptionValidationInput: {
-            projectId: null,
-            modelId: null
-        },
-        id: appId
-    };
-    const data = await graphqlRequest(query, variables);
-    return data.subscriptionDefinition;
-}
-
-// Step 3: Launch app or redirect to billing
-async function launchExternalApp(appName) {
-    hideMessage();
-    showMessage('Checking your subscription...', 'info');
-    try {
-        const app = await getAppIdByName(appName);
-        const subscription = await checkSubscription(app._id);
-
-        if (!subscription) {
-            showMessage('No subscription found. Redirecting to billing.', 'info');
-            const payload = btoa(JSON.stringify({
-                actions: ["SELECT_SUBSCRIPTION"],
-                origin: REDIRECT_URI,
-                client_id: CLIENT_ID
-            }));
-            const billingUrl = `${BASE_COMPONENT_URL}${payload}`;
-            window.location.href = billingUrl;
+        `;
+        const result = await graphqlRequest(query);
+        if (result.errors) {
+            console.error(result.errors);
+            showMessage('Failed to get subscriptions.', 'error');
             return;
         }
+        const subscriptions = result.data.subscriptions.nodes;
+        if (subscriptions.length === 0) {
+            showMessage('No subscriptions found.', 'error');
+            return;
+        }
+        // Display subscriptions (optional UI update)
+        hubsList.innerHTML = '';
+        subscriptions.forEach(sub => {
+            const li = document.createElement('li');
+            li.textContent = `${sub.displayName} (${sub.isActive ? 'Active' : 'Inactive'})`;
+            hubsList.appendChild(li);
+        });
+        hubCountDisplay.textContent = `Found ${subscriptions.length} subscriptions`;
 
-        showMessage('Subscription found. Launching app...', 'success');
-        window.location.href = app.launchUrl;
-
+        // Check for active subscription matching the app
+        const activeSubscription = subscriptions.find(s => s.isActive && s.displayName === APP_NAME_FOR_BILLING);
+        if (activeSubscription) {
+            showMessage('Active subscription found. You can launch the app.', 'success');
+            launchAppBtn.disabled = false;
+        } else {
+            showMessage('No active subscription found for this app.', 'error');
+            launchAppBtn.disabled = true;
+        }
     } catch (error) {
-        console.error("Error launching external app:", error);
-        showMessage(`Error launching external app: ${error.message}. Check the console for details.`, 'error');
+        console.error('Subscription check error:', error);
+        showMessage(`Error checking subscriptions: ${error.message}`, 'error');
     }
 }
 
-function handleManageBilling() {
-    const accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) {
-        showMessage('You must be logged in to manage your subscription. Please log in first.', 'error');
+function launchApp() {
+    if (!APP_NAME) {
+        showMessage('App name is not configured.', 'error');
         return;
     }
-    
-    const payload = btoa(JSON.stringify({
-        actions: ["SELECT_SUBSCRIPTION"],
-        origin: REDIRECT_URI,
-        client_id: CLIENT_ID,
-    }));
-
-    const billingUrl = `${BASE_COMPONENT_URL}${payload}`;
-    showMessage('Redirecting to the Clearly.Hub Billing Component...', 'info');
-    window.location.href = billingUrl;
+    const appUrl = BASE_COMPONENT_URL + APP_NAME;
+    setAppView(true);
+    launchAppBtn.disabled = true;
+    showMessage(`Launching app: ${APP_NAME}`, 'info');
+    window.open(appUrl, '_blank');
 }
 
-// --- Event Listeners and Initial Load Logic ---
-document.addEventListener('DOMContentLoaded', () => {
-    // Set default values for input fields from localStorage or defaults
-    clientIdInput.value = localStorage.getItem('clientId') || DEFAULT_CLIENT_ID;
-    redirectUriInput.value = localStorage.getItem('redirectUri') || DEFAULT_REDIRECT_URI;
-    appNameInput.value = localStorage.getItem('appName') || DEFAULT_APP_NAME;
-
-    // Update global variables with the loaded values
-    CLIENT_ID = clientIdInput.value;
-    REDIRECT_URI = redirectUriInput.value;
-    APP_NAME = appNameInput.value;
-    
-    // Attach event listeners
-    launchAppBtn.addEventListener("click", () => {
-        setAppView(true);
-        launchExternalApp(APP_NAME_FOR_BILLING);
-    });
-    loginBtn.addEventListener('click', initiateLogin);
-    logoutBtn.addEventListener('click', handleLogout);
-    callPublicApiBtn.addEventListener('click', () => getHubs(false));
-    callPrivateApiBtn.addEventListener('click', () => getHubs(true));
-    manageBillingBtn.addEventListener('click', handleManageBilling);
-
-    // Initial page load logic
-    const urlParams = new URLSearchParams(window.location.search);
-    if (localStorage.getItem('accessToken') || urlParams.get('code')) {
-        setAppView(true);
-    } else {
-        setAppView(false);
+// --- Billing Management ---
+async function openBillingPortal() {
+    showMessage('Opening billing portal...', 'info');
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+        showMessage('You must be logged in to manage billing.', 'error');
+        return;
     }
-    
-    const code = urlParams.get('code');
-    const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
+    const query = `
+        mutation OpenBillingPortal($input: OpenBillingPortalInput!) {
+            openBillingPortal(input: $input) {
+                url
+            }
+        }
+    `;
+    const variables = { input: { appName: APP_NAME_FOR_BILLING } };
 
-    if (code && codeVerifier) {
+    try {
+        const result = await graphqlRequest(query, variables);
+        if (result.errors) {
+            throw new Error(result.errors[0].message);
+        }
+        const billingUrl = result.data.openBillingPortal.url;
+        window.open(billingUrl, '_blank');
+        showMessage('Billing portal opened in a new tab.', 'success');
+    } catch (error) {
+        console.error('Billing portal error:', error);
+        showMessage(`Failed to open billing portal: ${error.message}`, 'error');
+    }
+}
+
+// --- Event Listeners ---
+loginBtn.addEventListener('click', initiateLogin);
+logoutBtn.addEventListener('click', handleLogout);
+launchAppBtn.addEventListener('click', launchApp);
+manageBillingBtn.addEventListener('click', openBillingPortal);
+
+callPublicApiBtn.addEventListener('click', async () => {
+    try {
+        const response = await fetch('https://hub.clearly.app/api/v1/health');
+        const text = await response.text();
+        apiResponseBox.textContent = text;
+        showMessage('Public API called successfully.', 'success');
+    } catch (error) {
+        showMessage(`Failed to call public API: ${error.message}`, 'error');
+    }
+});
+
+callPrivateApiBtn.addEventListener('click', async () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+        showMessage('You must be logged in to call the private API.', 'error');
+        return;
+    }
+    try {
+        const response = await fetch('https://hub.clearly.app/api/v1/userinfo', {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error('Failed to call private API');
+        const data = await response.json();
+        apiResponseBox.textContent = JSON.stringify(data, null, 2);
+        showMessage('Private API called successfully.', 'success');
+    } catch (error) {
+        showMessage(`Failed to call private API: ${error.message}`, 'error');
+    }
+});
+
+// --- On page load: check if redirected back with code to exchange for tokens ---
+window.addEventListener('load', async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+        // Remove code param from URL to keep it clean
         window.history.replaceState({}, document.title, window.location.pathname);
-        exchangeCodeForTokens(code, codeVerifier);
-        sessionStorage.removeItem('pkce_code_verifier');
-    } else if (localStorage.getItem('accessToken')) {
-        accessTokenDisplay.textContent = localStorage.getItem('accessToken');
-        idTokenDisplay.textContent = localStorage.getItem('idToken');
-        setLoggedInView(true);
-        showMessage('You are already logged in.', 'info');
-        getUserSubscriptions();
+
+        const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
+        if (!codeVerifier) {
+            showMessage('PKCE code verifier not found. Please login again.', 'error');
+            return;
+        }
+        await exchangeCodeForTokens(code, codeVerifier);
     } else {
-        setLoggedInView(false);
-        showMessage('You are logged out. Please log in to get started.', 'info');
+        // If tokens already exist, show logged-in view
+        const accessToken = localStorage.getItem('accessToken');
+        const idToken = localStorage.getItem('idToken');
+        if (accessToken && idToken) {
+            accessTokenDisplay.textContent = accessToken;
+            idTokenDisplay.textContent = idToken;
+            setLoggedInView(true);
+            await getUserSubscriptions();
+        } else {
+            setLoggedInView(false);
+            launchAppBtn.disabled = true;
+        }
     }
 });
