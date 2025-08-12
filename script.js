@@ -3,9 +3,10 @@ const directorSection = document.getElementById('director-section');
 const appSection = document.getElementById('app-section');
 const launchAppBtn = document.getElementById('launch-app-btn');
 const clientIdInput = document.getElementById('clientIdInput');
-const cognitoDomainInput = document.getElementById('cognitoDomainInput');
+const appNameInput = document.getElementById('appNameInput');
+//const cognitoDomainInput = document.getElementById('cognitoDomainInput');
 const redirectUriInput = document.getElementById('redirectUriInput');
-const cognitoRegionInput = document.getElementById('cognitoRegionInput');
+//const cognitoRegionInput = document.getElementById('cognitoRegionInput');
 const loginBtn = document.getElementById('login-btn');
 const logoutBtn = document.getElementById('logout-btn');
 const authSection = document.getElementById('auth-section');
@@ -26,9 +27,8 @@ const hubsList = document.getElementById('hubs-list');
 
 // --- Configuration (Dynamically updated from inputs) ---
 let CLIENT_ID;
-let COGNITO_USER_POOL_DOMAIN;
 let REDIRECT_URI;
-let COGNITO_REGION;
+let APP_NAME;
 const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
 const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
 let OAUTH_TOKEN_ENDPOINT;
@@ -36,9 +36,14 @@ const APP_NAME_FOR_BILLING = "Testing IAM";
 
 // Default values for convenience
 const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
-const DEFAULT_COGNITO_DOMAIN = "auth.clearly.app";
 const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
-const DEFAULT_COGNITO_REGION = "eu-central-1";
+const DEFAULT_APP_NAME = "IAM Test";
+
+// Constants
+const COGNITO_USER_POOL_DOMAIN = "auth.clearly.app";
+const COGNITO_REGION = "eu-central-1";
+OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
+
 
 // Update config variables when input fields change
 clientIdInput.addEventListener('input', (e) => localStorage.setItem('clientId', e.target.value));
@@ -470,16 +475,13 @@ function handleManageBilling() {
 document.addEventListener('DOMContentLoaded', () => {
     // Set default values for input fields from localStorage or defaults
     clientIdInput.value = localStorage.getItem('clientId') || DEFAULT_CLIENT_ID;
-    cognitoDomainInput.value = localStorage.getItem('cognitoUserPoolDomain') || DEFAULT_COGNITO_DOMAIN;
     redirectUriInput.value = localStorage.getItem('redirectUri') || DEFAULT_REDIRECT_URI;
-    cognitoRegionInput.value = localStorage.getItem('cognitoRegion') || DEFAULT_COGNITO_REGION;
+    appNameInput.value = localStorage.getItem('appName') || DEFAULT_APP_NAME;
 
     // Update global variables with the loaded values
     CLIENT_ID = clientIdInput.value;
-    COGNITO_USER_POOL_DOMAIN = cognitoDomainInput.value;
     REDIRECT_URI = redirectUriInput.value;
-    COGNITO_REGION = cognitoRegionInput.value;
-    OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
+    APP_NAME = appNameInput.value;
     
     // Attach event listeners
     launchAppBtn.addEventListener("click", () => {
