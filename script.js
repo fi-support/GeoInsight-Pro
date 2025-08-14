@@ -398,45 +398,11 @@ async function getUserSubscriptions() {
     }
 }
 
-
-async function checkSubscription(appId) {
-    const query = `
-        query SubscriptionDefinition(
-            $subscriptionValidationInput: SubscriptionValidationInput!
-            $id: String!
-        ) {
-            subscriptionDefinition(
-                subscriptionValidationInput: $subscriptionValidationInput
-                id: $id
-            ) {
-                _id
-                name
-                numberOfAllowedProjects
-                numberOfAllowedModels
-                publishToClearlyHub
-                exportModel
-            }
-        }
-    `;
-
-    const variables = {
-        subscriptionValidationInput: {
-            projectId: null,
-            modelId: null
-        },
-        id: appId
-    };
-    const data = await graphqlRequest(query, variables);
-    return data.subscriptionDefinition;
-}
-
 async function launchExternalApp(appId) {
     hideMessage();
     showMessage('Checking your subscription...', 'info');
     try {
-        const subscription = await checkSubscription(appId);
-        
-        if (!subscription) {
+        if (!subscriptions || subscriptions.length === 0) {
             showMessage('No subscription found. Redirecting to billing.', 'info');
             const payload = btoa(JSON.stringify({
                 actions: ["SELECT_SUBSCRIPTION"],
