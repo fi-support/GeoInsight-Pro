@@ -508,7 +508,7 @@ function handleManageBilling() {
 
 // --- Event Listeners and Initial Load Logic ---
 launchAppBtn.addEventListener('click', () => {
-    setAppView(true);
+    launchExternalApp(appNameInput.value || DEFAULT_APP_NAME);
 });
 
 loginBtn.addEventListener('click', initiateLogin);
@@ -529,26 +529,22 @@ document.addEventListener('DOMContentLoaded', () => {
     APP_NAME = appNameInput.value;
 
     const urlParams = new URLSearchParams(window.location.search);
-    if (localStorage.getItem('accessToken') || urlParams.get('code')) {
-        setAppView(true);
-    } else {
-        setAppView(false);
-    }
-    
     const code = urlParams.get('code');
     const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
 
     if (code && codeVerifier) {
+        // This is the initial login flow.
         window.history.replaceState({}, document.title, window.location.pathname);
         exchangeCodeForTokens(code, codeVerifier);
         sessionStorage.removeItem('pkce_code_verifier');
     } else if (localStorage.getItem('accessToken')) {
-        accessTokenDisplay.textContent = localStorage.getItem('accessToken');
-        idTokenDisplay.textContent = localStorage.getItem('idToken');
+        // This is the correct path for a user who is already logged in.
+        // It will now check the subscription and launch the app.
+        launchExternalApp(appNameInput.value || DEFAULT_APP_NAME);
         setLoggedInView(true);
-        showMessage('You are already logged in.', 'info');
-        getUserSubscriptions();
     } else {
+        // The user is not logged in.
+        setAppView(false);
         setLoggedInView(false);
         showMessage('You are logged out. Please log in to get started.', 'info');
     }
