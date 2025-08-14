@@ -22,7 +22,9 @@ const jwtDisplaySection = document.getElementById('jwt-display-section');
 const hubCountDisplay = document.getElementById('hub-count');
 const hubsList = document.getElementById('hubs-list');
 
-// --- Configuration (Dynamically updated from inputs) ---
+// btoa -> binary to ASCII: built-in JavaScript function that encodes a string in Base64
+
+// --- Configuration ---
 let CLIENT_ID;
 let REDIRECT_URI;
 let APP_NAME;
@@ -39,7 +41,7 @@ const DEFAULT_APP_NAME = "IAM Test";
 const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
 const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
 
-// Update config variables on input changes and save to local storage
+// Update config variables whenever the user changes the Client ID or Redirect URI
 clientIdInput.addEventListener('input', (e) => {
     CLIENT_ID = e.target.value;
     localStorage.setItem('clientId', CLIENT_ID);
@@ -50,6 +52,7 @@ redirectUriInput.addEventListener('input', (e) => {
 });
 
 // --- PKCE Helper Functions ---
+// Function that makes a code verifier
 function generateRandomString(length) {
     const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let text = '';
@@ -59,12 +62,14 @@ function generateRandomString(length) {
     return text;
 }
 
+// 
 async function sha256(plain) {
     const encoder = new TextEncoder();
     const data = encoder.encode(plain);
     return window.crypto.subtle.digest('SHA-256', data);
 }
 
+// Encodes the string to Base64 URL format
 function base64urlencode(buffer) {
     const bytes = new Uint8Array(buffer);
     let str = '';
@@ -77,12 +82,14 @@ function base64urlencode(buffer) {
         .replace(/=/g, '');
 }
 
+// Function that hashes the code verifier into a code challenge
 async function generateCodeChallenge(codeVerifier) {
     const hashed = await sha256(codeVerifier);
     return base64urlencode(hashed);
 }
 
 // --- UI Helper Functions ---
+// Displays feedback to the user
 function showMessage(message, type = 'info') {
     messageContainer.textContent = message;
     let bgColor, borderColor, textColor;
@@ -107,6 +114,7 @@ function hideMessage() {
     messageContainer.classList.add('hidden');
 }
 
+// Switches between director view and app view
 function setAppView(isAppVisible) {
     if (isAppVisible) {
         directorSection.classList.add('hidden');
@@ -117,6 +125,7 @@ function setAppView(isAppVisible) {
     }
 }
 
+// Toggles login vs logged-in UI and shows tokens if logged in
 function setLoggedInView(isLoggedIn) {
     if (isLoggedIn) {
         authSection.classList.add('hidden');
@@ -152,17 +161,23 @@ async function initiateLogin() {
     sessionStorage.setItem('pkce_code_verifier', codeVerifier);
 
     const authUrl = `https://${cleanDomain}/oauth2/authorize?` +
-                   `response_type=code&` +
-                   `client_id=${CLIENT_ID}&` +
-                   `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
-                   `scope=openid+profile+email&` +
-                   `code_challenge=${codeChallenge}&` +
-                   `code_challenge_method=S256`;
+                `response_type=code&` +
+                `client_id=${CLIENT_ID}&` +
+                `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+                `scope=openid+profile+email&` +
+                `code_challenge=${codeChallenge}&` +
+                `code_challenge_method=S256`;
 
     showMessage('Redirecting to OUP login page...', 'info');
     window.location.href = authUrl;
 }
 
+/*
+-Takes the authorization code returned from login.
+-Sends it to the OAuth token endpoint to get access token & ID token.
+-Stores tokens in localStorage.
+-Updates UI with token info and sets logged-in view.
+*/
 async function exchangeCodeForTokens(code, codeVerifier) {
     hideMessage();
     showMessage('Exchanging authorization code for tokens...', 'info');
@@ -203,6 +218,10 @@ async function exchangeCodeForTokens(code, codeVerifier) {
     }
 }
 
+/*
+-Removes tokens from storage.
+-Redirects to Clearly.Hub logout page.
+*/
 function handleLogout() {
     hideMessage();
     localStorage.removeItem('accessToken');
@@ -213,7 +232,7 @@ function handleLogout() {
     window.location.href = logoutUrl;
 }
 
-// --- GraphQL Helper Functions ---
+// --- GraphQL Functions ---
 async function graphqlRequest(query, variables = {}) {
     const token = localStorage.getItem("accessToken");
     const headers = { "Content-Type": "application/json" };
@@ -316,6 +335,11 @@ async function getHubs(authenticated) {
     }
 }
 
+// --- Billing  ---
+/*
+-Encodes client info in Base64 and redirects to Clearly.Hub Billing Component.
+-Requires login, so it checks for the access token first.
+*/
 function handleManageBilling() {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
@@ -334,7 +358,7 @@ function handleManageBilling() {
     window.location.href = billingUrl;
 }
 
-// --- Event Listeners and Initial Load Logic ---
+// --- Event Listeners and Actions ---
 launchAppBtn.addEventListener('click', () => {
     setAppView(true);
 });
@@ -345,6 +369,7 @@ callPublicApiBtn.addEventListener('click', () => getHubs(false));
 callPrivateApiBtn.addEventListener('click', () => getHubs(true));
 manageBillingBtn.addEventListener('click', handleManageBilling);
 
+// --- Page Load Logic ---
 document.addEventListener('DOMContentLoaded', () => {
     // Set default values for input fields from localStorage or predefined defaults
     clientIdInput.value = localStorage.getItem('clientId') || DEFAULT_CLIENT_ID;
