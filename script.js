@@ -195,7 +195,6 @@ async function exchangeCodeForTokens(code, codeVerifier) {
         idTokenDisplay.textContent = data.id_token;
         setLoggedInView(true);
         showMessage('Successfully obtained live tokens from OUP!', 'success');
-        await getUserSubscriptions();
 
     } catch (error) {
         console.error('Token exchange error:', error);
