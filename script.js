@@ -3,7 +3,6 @@ const directorSection = document.getElementById('director-section');
 const appSection = document.getElementById('app-section');
 const launchAppBtn = document.getElementById('launch-app-btn');
 const clientIdInput = document.getElementById('clientIdInput');
-const appNameInput = document.getElementById('appNameInput');
 const redirectUriInput = document.getElementById('redirectUriInput');
 const loginBtn = document.getElementById('login-btn');
 const logoutBtn = document.getElementById('logout-btn');
@@ -29,7 +28,6 @@ let REDIRECT_URI;
 let APP_NAME;
 const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
 const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
-const APP_NAME_FOR_BILLING = "Testing IAM";
 
 // Constants
 const COGNITO_USER_POOL_DOMAIN = "auth.clearly.app";
@@ -49,10 +47,6 @@ clientIdInput.addEventListener('input', (e) => {
 redirectUriInput.addEventListener('input', (e) => {
     REDIRECT_URI = e.target.value;
     localStorage.setItem('redirectUri', REDIRECT_URI);
-});
-appNameInput.addEventListener('input', (e) => {
-    APP_NAME = e.target.value;
-    localStorage.setItem('appName', APP_NAME);
 });
 
 // --- PKCE Helper Functions ---
@@ -142,7 +136,6 @@ function setLoggedInView(isLoggedIn) {
         hubCountDisplay.textContent = '';
     }
 }
-
 
 // --- Core Authentication Flow ---
 async function initiateLogin() {
@@ -324,153 +317,6 @@ async function getHubs(authenticated) {
     }
 }
 
-async function getUserSubscriptions() {
-    const accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) {
-        showMessage('You must be logged in to view subscriptions.', 'error');
-        return;
-    }
-
-    // You need to get the CLIENT_ID from your configuration.
-    const appOrClientId = CLIENT_ID; 
-
-    // Corrected query using 'myAppSubscriptions' and a variable.
-    const query = `
-        query GetUserSubscriptions($appOrClientId: String!) {
-            myAppSubscriptions(appOrClientId: $appOrClientId) {
-                userAppSubscriptions {
-                    subscriptionModels {
-                        name
-                        type
-                    }
-                }
-            }
-        }
-    `; 
-
-    // Pass the appOrClientId variable in the request.
-    const requestBody = { 
-        query, 
-        variables: { appOrClientId } 
-    };
-
-    try {
-        showMessage('Fetching your subscriptions...', 'info');
-        const response = await fetch(GRAPHQL_ENDPOINT, {
-            method: 'POST',
-            mode: 'cors',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
-            },
-            body: JSON.stringify(requestBody)
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.errors ? data.errors.map(e => e.message).join(', ') : 'Failed to fetch subscriptions');
-        }
-
-        const subscriptions = data?.data?.myAppSubscriptions?.userAppSubscriptions;
-        if (subscriptions && subscriptions.length > 0) {
-            let subscriptionList = subscriptions.map(sub => 
-                `${sub.subscriptionModels[0].name} (ID: ${sub._id})`
-            ).join('\n');
-            showMessage(`Your subscriptions:\n${subscriptionList}`, 'success');
-            console.log('User subscriptions:', subscriptions);
-        } else {
-            showMessage('No subscriptions found for this app.', 'info');
-        }
-
-    } catch (error) {
-        console.error('Subscription fetch error:', error);
-        showMessage(`Failed to fetch subscriptions: ${error.message}`, 'error');
-    }
-}
-
-async function getAppIdByName(appName) {
-    const query = `
-        query GetApplications {
-            applications {
-                _id
-                name
-                launchUrl
-            }
-        }
-    `;
-    const data = await graphqlRequest(query);
-    const app = data.applications.find(a => a.name === appName);
-    if (!app) throw new Error(`App '${appName}' not found`);
-    return app;
-}
-
-async function checkSubscription(appId) {
-    const query = `
-        query SubscriptionDefinition(
-            $subscriptionValidationInput: SubscriptionValidationInput!
-            $id: String!
-        ) {
-            subscriptionDefinition(
-                subscriptionValidationInput: $subscriptionValidationInput
-                id: $id
-            ) {
-                _id
-                name
-                numberOfAllowedProjects
-                numberOfAllowedModels
-                publishToClearlyHub
-                exportModel
-            }
-        }
-    `;
-
-    const variables = {
-        subscriptionValidationInput: {
-            projectId: null,
-            modelId: null
-        },
-        id: appId
-    };
-    const data = await graphqlRequest(query, variables);
-    return data.subscriptionDefinition;
-}
-
-async function launchExternalApp(appName) {
-    hideMessage();
-    showMessage('Checking your subscription...', 'info');
-    try {
-        const app = await getAppIdByName(appName);
-        const subscription = await checkSubscription(app._id);
-
-        if (!subscription) {
-            showMessage('No subscription found. Redirecting to billing.', 'info');
-            const payload = btoa(JSON.stringify({
-                actions: ["SELECT_SUBSCRIPTION"],
-                origin: REDIRECT_URI,
-                client_id: CLIENT_ID
-            }));
-            const billingUrl = `${BASE_COMPONENT_URL}${payload}`;
-            window.location.href = billingUrl;
-            return;
-        }
-
-        // --- NEW: Add a visual confirmation that the subscription check passed ---
-        // This message will be briefly visible before the app launches
-        showMessage('Subscription found. Launching app...', 'success');
-        
-        // --- NEW: A brief delay to allow the user to see the message ---
-        // This is a good practice for user feedback
-        setTimeout(() => {
-            window.location.href = app.launchUrl;
-        }, 1500); // 1.5 second delay
-
-    } catch (error) {
-        console.error("Error launching external app:", error);
-        showMessage(`Error launching external app: ${error.message}. Check the console for details.`, 'error');
-    }
-}
-
 function handleManageBilling() {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
@@ -503,13 +349,11 @@ manageBillingBtn.addEventListener('click', handleManageBilling);
 document.addEventListener('DOMContentLoaded', () => {
     // Set default values for input fields from localStorage or predefined defaults
     clientIdInput.value = localStorage.getItem('clientId') || DEFAULT_CLIENT_ID;
-    appNameInput.value = localStorage.getItem('appName') || DEFAULT_APP_NAME;
     redirectUriInput.value = localStorage.getItem('redirectUri') || DEFAULT_REDIRECT_URI;
     
     // Update global variables with the loaded values
     CLIENT_ID = clientIdInput.value;
     REDIRECT_URI = redirectUriInput.value;
-    APP_NAME = appNameInput.value;
 
     const urlParams = new URLSearchParams(window.location.search);
     if (localStorage.getItem('accessToken') || urlParams.get('code')) {
@@ -530,7 +374,6 @@ document.addEventListener('DOMContentLoaded', () => {
         idTokenDisplay.textContent = localStorage.getItem('idToken');
         setLoggedInView(true);
         showMessage('You are already logged in.', 'info');
-        getUserSubscriptions();
     } else {
         setLoggedInView(false);
         showMessage('You are logged out. Please log in to get started.', 'info');
