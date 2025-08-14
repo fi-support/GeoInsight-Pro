@@ -19,15 +19,15 @@ const apiRequestBox = document.getElementById('api-request-box');
 const apiResponseBox = document.getElementById('api-response-box');
 const statusMessage = document.getElementById('status-message');
 const jwtDisplaySection = document.getElementById('jwt-display-section');
-const hubCountDisplay = document = document.getElementById('hub-count');
+const hubCountDisplay = document.getElementById('hub-count');
 const hubsList = document.getElementById('hubs-list');
 
 // --- Configuration (Dynamically updated from inputs) ---
 let CLIENT_ID;
 let REDIRECT_URI;
+let APP_NAME;
 const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
 const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
-
 
 // Constants
 const COGNITO_USER_POOL_DOMAIN = "auth.clearly.app";
@@ -35,6 +35,7 @@ const COGNITO_REGION = "eu-central-1";
 const OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 
 // Defaults
+const DEFAULT_APP_NAME = "IAM Test";
 const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
 const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
 
@@ -47,7 +48,6 @@ redirectUriInput.addEventListener('input', (e) => {
     REDIRECT_URI = e.target.value;
     localStorage.setItem('redirectUri', REDIRECT_URI);
 });
-
 
 // --- PKCE Helper Functions ---
 function generateRandomString(length) {
@@ -137,7 +137,6 @@ function setLoggedInView(isLoggedIn) {
     }
 }
 
-
 // --- Core Authentication Flow ---
 async function initiateLogin() {
     hideMessage();
@@ -153,12 +152,12 @@ async function initiateLogin() {
     sessionStorage.setItem('pkce_code_verifier', codeVerifier);
 
     const authUrl = `https://${cleanDomain}/oauth2/authorize?` +
-        `response_type=code&` +
-        `client_id=${CLIENT_ID}&` +
-        `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
-        `scope=openid+profile+email&` +
-        `code_challenge=${codeChallenge}&` +
-        `code_challenge_method=S256`;
+                   `response_type=code&` +
+                   `client_id=${CLIENT_ID}&` +
+                   `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+                   `scope=openid+profile+email&` +
+                   `code_challenge=${codeChallenge}&` +
+                   `code_challenge_method=S256`;
 
     showMessage('Redirecting to OUP login page...', 'info');
     window.location.href = authUrl;
@@ -196,9 +195,8 @@ async function exchangeCodeForTokens(code, codeVerifier) {
         idTokenDisplay.textContent = data.id_token;
         setLoggedInView(true);
         showMessage('Successfully obtained live tokens from OUP!', 'success');
-        
-        // Removed the call to getUserSubscriptions()
-        
+        await getUserSubscriptions();
+
     } catch (error) {
         console.error('Token exchange error:', error);
         showMessage(`Authentication failed: ${error.message}. Check your configuration and try again.`, 'error');
@@ -319,77 +317,6 @@ async function getHubs(authenticated) {
     }
 }
 
-async function checkSubscription(appId) {
-    const query = `
-        query SubscriptionDefinition(
-            $subscriptionValidationInput: SubscriptionValidationInput!
-            $id: String!
-        ) {
-            subscriptionDefinition(
-                subscriptionValidationInput: $subscriptionValidationInput
-                id: $id
-            ) {
-                _id
-                name
-                numberOfAllowedProjects
-                numberOfAllowedModels
-                publishToClearlyHub
-                exportModel
-            }
-        }
-    `;
-
-    const variables = {
-        subscriptionValidationInput: {
-            projectId: null,
-            modelId: null
-        },
-        id: appId
-    };
-    const data = await graphqlRequest(query, variables);
-    return data.subscriptionDefinition;
-}
-
-async function launchExternalApp(appId) {
-    hideMessage();
-    showMessage('Checking your subscription...', 'info');
-    try {
-        const subscription = await checkSubscription(appId);
-        
-        if (!subscription) {
-            showMessage('No subscription found. Redirecting to billing.', 'info');
-            const payload = btoa(JSON.stringify({
-                actions: ["SELECT_SUBSCRIPTION"],
-                origin: REDIRECT_URI,
-                client_id: CLIENT_ID
-            }));
-            const billingUrl = `${BASE_COMPONENT_URL}${payload}`;
-            window.location.href = billingUrl;
-            return;
-        }
-
-        // --- UI VERIFICATION LOGIC ---
-        // This block runs only if a subscription is found.
-        const subscriptionName = subscription.name;
-        showMessage(`Subscription found: ${subscriptionName}. Launching app...`, 'success');
-        
-        // Add a small delay to allow the user to read the message
-        setTimeout(() => {
-            // NOTE: The launchUrl needs to be fetched from a query if not already known.
-            // Since this function is no longer dependent on getAppIdByName, we need to
-            // get the launchUrl from the app details. We'll simulate this for now.
-            // A real-world app would store this or fetch it.
-            const dummyLaunchUrl = REDIRECT_URI;
-            window.location.href = dummyLaunchUrl;
-        }, 4000); // 4-second delay
-
-    } catch (error) {
-        console.error("Error launching external app:", error);
-        showMessage(`Error launching external app: ${error.message}. Check the console for details.`, 'error');
-    }
-}
-
-
 function handleManageBilling() {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
@@ -410,19 +337,14 @@ function handleManageBilling() {
 
 // --- Event Listeners and Initial Load Logic ---
 launchAppBtn.addEventListener('click', () => {
-    // This button should launch the app and check the subscription.
-    // Instead of just showing the UI, we'll call the launch function.
-    launchExternalApp(clientIdInput.value || DEFAULT_CLIENT_ID);
+    setAppView(true);
 });
 
 loginBtn.addEventListener('click', initiateLogin);
 logoutBtn.addEventListener('click', handleLogout);
 callPublicApiBtn.addEventListener('click', () => getHubs(false));
 callPrivateApiBtn.addEventListener('click', () => getHubs(true));
-manageBillingBtn.addEventListener('click', () => {
-  // Pass the current client ID to the billing management handler
-  handleManageBilling();
-});
+manageBillingBtn.addEventListener('click', handleManageBilling);
 
 document.addEventListener('DOMContentLoaded', () => {
     // Set default values for input fields from localStorage or predefined defaults
@@ -434,22 +356,25 @@ document.addEventListener('DOMContentLoaded', () => {
     REDIRECT_URI = redirectUriInput.value;
 
     const urlParams = new URLSearchParams(window.location.search);
+    if (localStorage.getItem('accessToken') || urlParams.get('code')) {
+        setAppView(true);
+    } else {
+        setAppView(false);
+    }
+    
     const code = urlParams.get('code');
     const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
 
     if (code && codeVerifier) {
-        // This is the initial login flow.
         window.history.replaceState({}, document.title, window.location.pathname);
         exchangeCodeForTokens(code, codeVerifier);
         sessionStorage.removeItem('pkce_code_verifier');
     } else if (localStorage.getItem('accessToken')) {
-        // This is the correct path for a user who is already logged in.
-        // It will now check the subscription and launch the app.
-        launchExternalApp(clientIdInput.value || DEFAULT_CLIENT_ID);
+        accessTokenDisplay.textContent = localStorage.getItem('accessToken');
+        idTokenDisplay.textContent = localStorage.getItem('idToken');
         setLoggedInView(true);
+        showMessage('You are already logged in.', 'info');
     } else {
-        // The user is not logged in.
-        setAppView(false);
         setLoggedInView(false);
         showMessage('You are logged out. Please log in to get started.', 'info');
     }
