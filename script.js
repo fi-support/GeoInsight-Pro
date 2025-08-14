@@ -19,7 +19,7 @@ const apiRequestBox = document.getElementById('api-request-box');
 const apiResponseBox = document.getElementById('api-response-box');
 const statusMessage = document.getElementById('status-message');
 const jwtDisplaySection = document.getElementById('jwt-display-section');
-const hubCountDisplay = document.getElementById('hub-count');
+const hubCountDisplay = document = document.getElementById('hub-count');
 const hubsList = document.getElementById('hubs-list');
 
 // --- Configuration (Dynamically updated from inputs) ---
@@ -197,8 +197,7 @@ async function exchangeCodeForTokens(code, codeVerifier) {
         setLoggedInView(true);
         showMessage('Successfully obtained live tokens from OUP!', 'success');
         
-        // After getting tokens, immediately launch the app to check for a subscription
-        launchExternalApp(CLIENT_ID);
+        // Removed the call to getUserSubscriptions()
         
     } catch (error) {
         console.error('Token exchange error:', error);
@@ -319,7 +318,6 @@ async function getHubs(authenticated) {
         hubCountDisplay.textContent = 'Failed to load hubs.';
     }
 }
-
 
 async function checkSubscription(appId) {
     const query = `
