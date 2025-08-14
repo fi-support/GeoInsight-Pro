@@ -1,15 +1,11 @@
-/* Import Tailwind CSS and Inter font */
-@import url('https://cdn.tailwindcss.com');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-
-/* Apply Inter font and basic background/text colors */
+/* Inter font & background colors */
 body {
     font-family: 'Inter', sans-serif;
     background-color: #f0f4f8;
     color: #334155;
 }
 
-/* Main container for the app pages (NOT welcome page) */
+/* Container for pages */
 .container {
     max-width: 1400px;
     margin: 40px auto;
@@ -21,35 +17,46 @@ body {
                 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* Welcome page section – full centering */
+/* Welcome section */
 #director-section {
     display: flex;
-    align-items: center;       /* Vertical center */
-    justify-content: center;   /* Horizontal center */
+    align-items: center;
+    justify-content: center;
     min-height: 70vh;
     padding: 40px;
 }
 
-/* Two-column layout for the app section */
+/* Layout */
 .split-screen {
     display: grid;
-    grid-template-columns: 1fr 2fr; /* Left panel 1/3, right 2/3 */
+    grid-template-columns: 1fr 2fr;
     gap: 40px;
     min-height: 70vh;
 }
-
-/* Left panel styling */
 .left-panel {
     border-right: 1px solid #e2e8f0;
     padding-right: 40px;
 }
-
-/* Right panel styling */
 .right-panel {
     padding-left: 40px;
 }
 
-/* Base button styling */
+/* Responsive */
+@media (max-width: 768px) {
+    .split-screen {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .left-panel {
+        border-right: none;
+        padding-right: 0;
+    }
+    .right-panel {
+        padding-left: 0;
+    }
+}
+
+/* Buttons */
 .btn {
     padding: 12px 24px;
     border-radius: 8px;
@@ -57,33 +64,27 @@ body {
     transition: all 0.2s ease-in-out;
     cursor: pointer;
 }
-
-/* Primary button styling (Login) */
 .btn-primary {
     background-color: #3b82f6;
-    color: #ffffff;
+    color: #fff;
     box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
 }
 .btn-primary:hover {
     background-color: #2563eb;
     transform: translateY(-2px);
 }
-
-/* Secondary button styling (Logout) */
 .btn-secondary {
     background-color: #ef4444;
-    color: #ffffff;
+    color: #fff;
     box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
 }
 .btn-secondary:hover {
     background-color: #dc2626;
     transform: translateY(-2px);
 }
-
-/* API Call button */
 .btn-api {
     background-color: #10b981;
-    color: #ffffff;
+    color: #fff;
     box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
 }
 .btn-api:hover {
@@ -91,7 +92,7 @@ body {
     transform: translateY(-2px);
 }
 
-/* Custom message box for alerts/info */
+/* Messages */
 .message-box {
     padding: 16px;
     border-radius: 8px;
@@ -104,7 +105,7 @@ body {
     color: #1e40af;
 }
 
-/* Styling for displaying tokens */
+/* Tokens */
 .token-display {
     background-color: #f8fafc;
     padding: 15px;
@@ -113,22 +114,17 @@ body {
     margin-top: 15px;
     font-size: 0.875rem;
 }
-.token-display h3 {
-    font-weight: 700;
-    margin-bottom: 10px;
-    color: #1a202c;
-}
 .token-display pre {
     white-space: pre-wrap;
     word-break: break-all;
     background-color: #f1f5f9;
     padding: 10px;
     border-radius: 6px;
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    font-family: 'SFMono-Regular', Consolas, monospace;
     overflow-x: auto;
 }
 
-/* Styling for API response box */
+/* API box */
 .api-response-box {
     padding: 16px;
     border-radius: 8px;
@@ -136,10 +132,10 @@ body {
     background-color: #f1f5f9;
     border: 1px solid #e2e8f0;
     white-space: pre-wrap;
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    font-family: 'SFMono-Regular', Consolas, monospace;
 }
 
-/* Card for director section */
+/* Card */
 .card {
     max-width: 600px;
     padding: 40px;
@@ -150,6 +146,7 @@ body {
     text-align: center;
 }
 
+/* Hide utility */
 .hidden {
     display: none !important;
 }
