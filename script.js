@@ -26,8 +26,9 @@ const hubsList = document.getElementById('hubs-list');
 
 // --- Configuration ---
 let CLIENT_ID;
-let REDIRECT_URI;
-let APP_NAME;
+let REDIRECT_URI; // redirect URI after login
+
+let RETURN_URL; // return from billing
 const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
 const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
 
@@ -37,7 +38,6 @@ const COGNITO_REGION = "eu-central-1";
 const OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 
 // Defaults
-const DEFAULT_APP_NAME = "IAM Test";
 const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
 const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
 
@@ -363,6 +363,22 @@ launchAppBtn.addEventListener('click', () => {
     setAppView(true);
 });
 
+// Function that can take the Base64-encoded string, decode it, and parse the JSON (to understand return data)
+function parseReturnData(fullUrl) {
+    try {
+        const urlParams = new URLSearchParams(new URL(fullUrl).search);
+        const dataParam = urlParams.get('data');
+        if (!dataParam) {
+            return null; // No data parameter found
+        }
+        const decoded = atob(dataParam);
+        return JSON.parse(decoded);
+    } catch (error) {
+        console.error("Failed to parse billing return data:", error);
+        return null;
+    }
+}
+
 loginBtn.addEventListener('click', initiateLogin);
 logoutBtn.addEventListener('click', handleLogout);
 callPublicApiBtn.addEventListener('click', () => getHubs(false));
@@ -380,25 +396,39 @@ document.addEventListener('DOMContentLoaded', () => {
     REDIRECT_URI = redirectUriInput.value;
 
     const urlParams = new URLSearchParams(window.location.search);
-    if (localStorage.getItem('accessToken') || urlParams.get('code')) {
-        setAppView(true);
-    } else {
-        setAppView(false);
-    }
-    
     const code = urlParams.get('code');
     const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
+    const dataFromBilling = urlParams.get('data'); // Capture the data parameter
 
+    // --- Process URL parameters in order of priority ---
     if (code && codeVerifier) {
+        // This is the initial login flow, which is the highest priority.
         window.history.replaceState({}, document.title, window.location.pathname);
         exchangeCodeForTokens(code, codeVerifier);
         sessionStorage.removeItem('pkce_code_verifier');
+    } else if (dataFromBilling) {
+        // This is the return from the billing component.
+        // It must be checked before a regular accessToken check.
+        const subscriptionDetails = parseReturnData(window.location.href);
+        if (subscriptionDetails && subscriptionDetails.subscription) {
+            const subName = subscriptionDetails.subscription.name;
+            const hubName = subscriptionDetails.subscribedHub.name;
+            showMessage(`Subscription selected: "${subName}" for hub "${hubName}".`, 'success');
+        } else {
+            showMessage('Failed to retrieve subscription details.', 'error');
+        }
+        window.history.replaceState({}, document.title, window.location.pathname); // Clean up the URL
+        setAppView(true);
+        setLoggedInView(true);
     } else if (localStorage.getItem('accessToken')) {
+        // This is the case for a regular page load where the user is already logged in.
         accessTokenDisplay.textContent = localStorage.getItem('accessToken');
         idTokenDisplay.textContent = localStorage.getItem('idToken');
         setLoggedInView(true);
         showMessage('You are already logged in.', 'info');
     } else {
+        // This is the default case if the user is logged out.
+        setAppView(false);
         setLoggedInView(false);
         showMessage('You are logged out. Please log in to get started.', 'info');
     }
