@@ -1,58 +1,48 @@
 // --- UI Element references ---
-const directorSection = document.getElementById('director-section');
-const appSection = document.getElementById('app-section');
-const launchAppBtn = document.getElementById('launch-app-btn');
-const clientIdInput = document.getElementById('clientIdInput');
-const redirectUriInput = document.getElementById('redirectUriInput');
 const loginBtn = document.getElementById('login-btn');
 const logoutBtn = document.getElementById('logout-btn');
-const authSection = document.getElementById('auth-section');
-const loggedInSection = document.getElementById('logged-in-section');
-const accessTokenDisplay = document.getElementById('access-token');
-const idTokenDisplay = document.getElementById('id-token');
-const messageContainer = document.getElementById('message-container');
-const callPublicApiBtn = document.getElementById('call-public-api-btn');
-const callPrivateApiBtn = document.getElementById('call-private-api-btn');
+const appContainer = document.getElementById('app-container');
+const loginOverlay = document.getElementById('login-overlay');
 const manageBillingBtn = document.getElementById('manage-billing-btn');
-const apiResponseSection = document.getElementById('api-response-section');
-const apiRequestBox = document.getElementById('api-request-box');
-const apiResponseBox = document.getElementById('api-response-content');
-const statusMessage = document.getElementById('status-message');
-const jwtDisplaySection = document.getElementById('jwt-display-section');
-const hubCountDisplay = document.getElementById('hub-count');
-const hubsList = document.getElementById('hubs-list');
+const mapContainer = document.getElementById('map');
+const hubDatasetsSelect = document.getElementById('hub-datasets-select');
+const allDatasetsSelect = document.getElementById('all-datasets-select');
+const loader = document.getElementById('loader');
+const subscriptionNameSpan = document.getElementById('subscription-name');
+const featuresList = document.getElementById('features-list');
+const instructionText = document.getElementById('instruction-text');
+const markerControls = document.getElementById('marker-controls');
+const markerUnlocked = document.getElementById('marker-unlocked');
+const markerLocked = document.getElementById('marker-locked');
+const addMarkerBtn = document.getElementById('add-marker-btn');
+const iconSelect = document.getElementById('icon-select');
+const bezierControls = document.getElementById('bezier-controls');
+const bezierUnlocked = document.getElementById('bezier-unlocked');
+const bezierLocked = document.getElementById('bezier-locked');
+const drawLineBtn = document.getElementById('draw-line-btn');
+const finishLineBtn = document.getElementById('finish-line-btn');
 
-// btoa -> binary to ASCII: built-in JavaScript function that encodes a string in Base64
-
-// --- Configuration ---
-let CLIENT_ID;
-let REDIRECT_URI; // redirect URI after login
-
-let RETURN_URL; // return from billing
-const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
-const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
-
-// Constants
+// --- State & Config Variables ---
+let map = null;
+let wmsLayer = null;
+let isAddMarkerMode = false;
+let isDrawingLine = false;
+let linePoints = [];
+let tempPolyline = null;
+let markerColorIndex = 0;
+const ACTIVE_HUB_ID = "65f03b46fe2ac522c6ac7b95";
+const ICONS = ['star', 'home', 'flag', 'car', 'glass', 'music', 'road'];
+const MARKER_COLORS = ['red', 'darkred', 'orange', 'green', 'darkgreen', 'blue', 'purple', 'darkpurple', 'cadetblue'];
+const SUBSCRIPTION_FEATURES = { BREAD: ["Basic Map Access"], STEAK: ["Basic Map Access", "Awesome Markers"], WAGYU: ["Basic Map Access", "Awesome Markers", "Animated Line Drawing"] };
+const CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
+const REDIRECT_URI = "http://127.0.0.1:5500/";
 const COGNITO_USER_POOL_DOMAIN = "auth.clearly.app";
-const COGNITO_REGION = "eu-central-1";
 const OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
-
-// Defaults
-const DEFAULT_CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
-const DEFAULT_REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
-
-// Update config variables whenever the user changes the Client ID or Redirect URI
-clientIdInput.addEventListener('input', (e) => {
-    CLIENT_ID = e.target.value;
-    localStorage.setItem('clientId', CLIENT_ID);
-});
-redirectUriInput.addEventListener('input', (e) => {
-    REDIRECT_URI = e.target.value;
-    localStorage.setItem('redirectUri', REDIRECT_URI);
-});
+const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
+const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
+const PLANE_ICON_SVG = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M21.4,12.6l-5.7-1.3L13.4,6c-0.2-0.5-0.9-0.5-1.1,0L10,11.3l-5.7,1.3c-0.5,0.1-0.5,0.8,0,0.9l5.7,1.3L12.3,20c0.2,0.5,0.9,0.5,1.1,0l2.3-5.3l5.7-1.3C21.9,13.4,21.9,12.7,21.4,12.6z"/></svg>')}`;
 
 // --- PKCE Helper Functions ---
-// Function that makes a code verifier
 function generateRandomString(length) {
     const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let text = '';
@@ -61,191 +51,133 @@ function generateRandomString(length) {
     }
     return text;
 }
-
-// 
 async function sha256(plain) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(plain);
+    const data = new TextEncoder().encode(plain);
     return window.crypto.subtle.digest('SHA-256', data);
 }
-
-// Encodes the string to Base64 URL format
 function base64urlencode(buffer) {
+    let s = '';
     const bytes = new Uint8Array(buffer);
-    let str = '';
     for (let i = 0; i < bytes.byteLength; i++) {
-        str += String.fromCharCode(bytes[i]);
+        s += String.fromCharCode(bytes[i]);
     }
-    return btoa(str)
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
-
-// Function that hashes the code verifier into a code challenge
-async function generateCodeChallenge(codeVerifier) {
-    const hashed = await sha256(codeVerifier);
+async function generateCodeChallenge(verifier) {
+    const hashed = await sha256(verifier);
     return base64urlencode(hashed);
 }
 
-// --- UI Helper Functions ---
-// Displays feedback to the user
-function showMessage(message, type = 'info') {
-    messageContainer.textContent = message;
-    let bgColor, borderColor, textColor;
-    if (type === 'error') {
-        bgColor = 'bg-red-100';
-        borderColor = 'border-red-300';
-        textColor = 'text-red-800';
-    } else if (type === 'success') {
-        bgColor = 'bg-green-100';
-        borderColor = 'border-green-300';
-        textColor = 'text-green-800';
-    } else { // info
-        bgColor = 'bg-blue-100';
-        borderColor = 'border-blue-300';
-        textColor = 'text-blue-800';
+// --- Map Functions ---
+function initializeMap() {
+    if (map) return;
+    map = L.map(mapContainer).setView([52.1601, 4.4970], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    const subscriptionName = (sessionStorage.getItem('subscriptionName') || 'BREAD').toUpperCase();
+    let markerOptions = {};
+    if (subscriptionName === 'STEAK') {
+        markerOptions.icon = L.AwesomeMarkers.icon({ icon: 'cutlery', prefix: 'fa', markerColor: 'orange' });
+    } else if (subscriptionName === 'WAGYU') {
+        markerOptions.icon = L.AwesomeMarkers.icon({ icon: 'rocket', prefix: 'fa', markerColor: 'darkpurple' });
     }
-    messageContainer.className = `message-box mt-4 ${bgColor} ${borderColor} ${textColor}`;
-    messageContainer.classList.remove('hidden');
+    L.marker([52.1601, 4.4970], markerOptions).addTo(map).bindPopup(`Leiden (${subscriptionName} Tier)`);
+    map.on('click', onMapClick);
 }
 
-function hideMessage() {
-    messageContainer.classList.add('hidden');
+function addWmsLayerToMap(url, layerName) {
+    if (wmsLayer) {
+        map.removeLayer(wmsLayer);
+    }
+    const baseUrl = url.split('?')[0];
+    wmsLayer = L.tileLayer.wms(baseUrl, {
+        layers: layerName,
+        format: 'image/png',
+        transparent: true
+    }).addTo(map);
+    wmsLayer.on('tileerror', e => {
+        console.error("WMS Tile Error:", e);
+        alert(`Could not load map layer: "${layerName}".`);
+    });
 }
 
-// Switches between director view and app view
-function setAppView(isAppVisible) {
-    if (isAppVisible) {
-        directorSection.classList.add('hidden');
-        appSection.classList.remove('hidden');
-    } else {
-        directorSection.classList.remove('hidden');
-        appSection.classList.add('hidden');
+function zoomToDatasetExtent(coordinates) {
+    if (!coordinates || !coordinates[0] || coordinates[0].length < 3) return;
+    const bounds = coordinates[0].map(c => [c[1], c[0]]);
+    map.flyToBounds(bounds);
+}
+
+function onMapClick(e) {
+    const subscriptionName = (sessionStorage.getItem('subscriptionName') || 'BREAD').toUpperCase();
+    if (isAddMarkerMode) {
+        if (subscriptionName !== 'STEAK' && subscriptionName !== 'WAGYU') return;
+        const selectedIcon = iconSelect.value;
+        const markerColor = MARKER_COLORS[markerColorIndex];
+        markerColorIndex = (markerColorIndex + 1) % MARKER_COLORS.length;
+        L.marker(e.latlng, {
+            icon: L.AwesomeMarkers.icon({ icon: selectedIcon, prefix: 'fa', markerColor: markerColor })
+        }).addTo(map).bindPopup(`A new '${selectedIcon}' marker!`);
+        toggleAddMarkerMode();
+    } else if (isDrawingLine) {
+        if (subscriptionName !== 'WAGYU') return;
+        linePoints.push(e.latlng);
+        if (tempPolyline) {
+            tempPolyline.addLatLng(e.latlng);
+        } else {
+            tempPolyline = L.polyline([e.latlng], { color: '#8b5cf6', dashArray: '5, 5' }).addTo(map);
+        }
+        instructionText.textContent = 'Click to add more points, or click "Finish Drawing".';
     }
 }
 
-// Toggles login vs logged-in UI and shows tokens if logged in
-function setLoggedInView(isLoggedIn) {
-    if (isLoggedIn) {
-        authSection.classList.add('hidden');
-        loggedInSection.classList.remove('hidden');
-        statusMessage.textContent = "Successfully Logged In!";
-        statusMessage.classList.remove('text-gray-600');
-        statusMessage.classList.add('text-green-600');
-        jwtDisplaySection.classList.remove('hidden');
-    } else {
-        authSection.classList.remove('hidden');
-        loggedInSection.classList.add('hidden');
-        statusMessage.textContent = "Click a button on the left to get started.";
-        statusMessage.classList.add('text-gray-600');
-        statusMessage.classList.remove('text-green-600');
-        jwtDisplaySection.classList.add('hidden');
-        hubsList.innerHTML = '';
-        hubCountDisplay.textContent = '';
+function toggleAddMarkerMode() {
+    if (isDrawingLine) toggleDrawLineMode();
+    isAddMarkerMode = !isAddMarkerMode;
+    mapContainer.classList.toggle('map-add-marker', isAddMarkerMode);
+    addMarkerBtn.textContent = isAddMarkerMode ? 'Cancel' : 'Enter Add Marker Mode';
+    addMarkerBtn.classList.toggle('btn-secondary', isAddMarkerMode);
+    instructionText.textContent = isAddMarkerMode ? 'Click the map to place a marker.' : 'Select a WMS dataset to display it on the map.';
+}
+
+function toggleDrawLineMode() {
+    if (isAddMarkerMode) toggleAddMarkerMode();
+    isDrawingLine = !isDrawingLine;
+    mapContainer.classList.toggle('map-draw-line', isDrawingLine);
+    drawLineBtn.textContent = isDrawingLine ? 'Cancel Drawing' : 'Draw Animated Line';
+    drawLineBtn.classList.toggle('btn-secondary', isDrawingLine);
+    finishLineBtn.classList.toggle('hidden', !isDrawingLine);
+    instructionText.textContent = isDrawingLine ? 'Click on the map to start drawing your line.' : 'Select a WMS dataset to display it on the map.';
+    if (!isDrawingLine) {
+        if (tempPolyline) map.removeLayer(tempPolyline);
+        tempPolyline = null;
+        linePoints = [];
     }
 }
 
-// --- Core Authentication Flow ---
-async function initiateLogin() {
-    hideMessage();
-    if (!CLIENT_ID || !REDIRECT_URI) {
-        showMessage('Please fill in all OUP IAM Configuration fields.', 'error');
+function finishDrawingLine() {
+    if (linePoints.length < 2) {
+        alert("Please add at least two points to draw a line.");
         return;
     }
-
-    const cleanDomain = COGNITO_USER_POOL_DOMAIN.replace(/^https?:\/\//, '');
-
-    const codeVerifier = generateRandomString(128);
-    const codeChallenge = await generateCodeChallenge(codeVerifier);
-    sessionStorage.setItem('pkce_code_verifier', codeVerifier);
-
-    const authUrl = `https://${cleanDomain}/oauth2/authorize?` +
-                `response_type=code&` +
-                `client_id=${CLIENT_ID}&` +
-                `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
-                `scope=openid+profile+email&` +
-                `code_challenge=${codeChallenge}&` +
-                `code_challenge_method=S256`;
-
-    showMessage('Redirecting to OUP login page...', 'info');
-    window.location.href = authUrl;
-}
-
-/*
--Takes the authorization code returned from login.
--Sends it to the OAuth token endpoint to get access token & ID token.
--Stores tokens in localStorage.
--Updates UI with token info and sets logged-in view.
-*/
-async function exchangeCodeForTokens(code, codeVerifier) {
-    hideMessage();
-    showMessage('Exchanging authorization code for tokens...', 'info');
-    
-    const body = new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: CLIENT_ID,
-        code: code,
-        redirect_uri: REDIRECT_URI,
-        code_verifier: codeVerifier
-    });
-
-    try {
-        const response = await fetch(OAUTH_TOKEN_ENDPOINT, {
-            method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: body.toString()
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error_description || 'Failed to exchange code for tokens');
+    L.bezier({
+        path: [linePoints],
+        icon: {
+            path: PLANE_ICON_SVG,
+            iconTravelLength: 1,
+            iconMaxWidth: 30,
+            iconMaxHeight: 30
         }
-
-        const data = await response.json();
-        localStorage.setItem('accessToken', data.access_token);
-        localStorage.setItem('idToken', data.id_token);
-        accessTokenDisplay.textContent = data.access_token;
-        idTokenDisplay.textContent = data.id_token;
-        setLoggedInView(true);
-        showMessage('Successfully obtained live tokens from OUP!', 'success');
-
-    } catch (error) {
-        console.error('Token exchange error:', error);
-        showMessage(`Authentication failed: ${error.message}. Check your configuration and try again.`, 'error');
-        setLoggedInView(false);
-    }
+    }).addTo(map);
+    toggleDrawLineMode();
 }
 
-/*
--Removes tokens from storage.
--Redirects to Clearly.Hub logout page.
-*/
-function handleLogout() {
-    hideMessage();
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('idToken');
-    sessionStorage.removeItem('pkce_code_verifier');
-    
-    const logoutUrl = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&logout_uri=${encodeURIComponent(REDIRECT_URI)}`;
-    window.location.href = logoutUrl;
-}
-
-// --- GraphQL Functions ---
-async function graphqlRequest(query, variables = {}) {
+// --- API / Data Fetching Functions ---
+async function graphqlRequest(query, variables) {
     const token = localStorage.getItem("accessToken");
-    const headers = { "Content-Type": "application/json" };
-    if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(GRAPHQL_ENDPOINT, {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify({ query, variables }),
-    });
-
+    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+    const response = await fetch(GRAPHQL_ENDPOINT, { method: "POST", headers, body: JSON.stringify({ query, variables }) });
+    if (!response.ok) throw new Error(`GraphQL request failed: ${response.status}`);
     const result = await response.json();
     if (result.errors) {
         console.error("GraphQL Error:", result.errors);
@@ -254,182 +186,227 @@ async function graphqlRequest(query, variables = {}) {
     return result.data;
 }
 
-async function getHubs(authenticated) {
-    const accessToken = localStorage.getItem('accessToken');
-    const headers = { 'Content-Type': 'application/json' };
-    
-    const query = `query GetHubs($rootHubsOnly: Boolean) { hubs(rootHubsOnly: $rootHubsOnly) { results { ... on Hub { _id name findability type } } } }`;
-    const variables = {
-        rootHubsOnly: false
-    };
-    const requestBody = { query, variables };
-    
-    let responseMessage = "";
-    
-    if (authenticated) {
-        if (!accessToken) {
-            showMessage('No Access Token found. Please log in first.', 'error');
-            return;
-        }
-        headers['Authorization'] = `Bearer ${accessToken}`;
-        responseMessage = "This is a live API response from an authenticated hubs query. It returns all hubs you have access to.";
-    } else {
-        responseMessage = "This is a live API response from an unauthenticated hubs query. It only returns public hubs.";
-    }
-    
-    const requestDetails = `
-        URL: ${GRAPHQL_ENDPOINT}
-        Method: POST
-        Headers:
-            Content-Type: application/json
-            ${authenticated ? `Authorization: Bearer ${accessToken.substring(0, 10)}...` : ''}
-        Body:
-        ${JSON.stringify(requestBody, null, 2)}
-    `;
-
+async function getWmsLayerNameFromCapabilities(wmsUrl) {
+    const baseUrl = wmsUrl.split('?')[0];
+    const capabilitiesUrl = `${baseUrl}?service=WMS&request=GetCapabilities`;
     try {
-        showMessage(`Making ${authenticated ? 'authenticated' : 'public'} GraphQL query...`, 'info');
-        apiResponseSection.classList.remove('hidden');
-        apiRequestBox.textContent = `--- Request ---\n${requestDetails}`;
-        
-        const response = await fetch(GRAPHQL_ENDPOINT, {
-            method: 'POST',
-            mode: 'cors',
-            headers: headers,
-            body: JSON.stringify(requestBody)
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            apiResponseBox.textContent = `--- Response ---\n${responseMessage}\n\n${JSON.stringify(data, null, 2)}`;
-            showMessage('GraphQL query successful!', 'success');
-            
-            const hubs = data?.data?.hubs?.results;
-            if (hubs) {
-                hubsList.innerHTML = '';
-                if (hubs.length > 0) {
-                    hubCountDisplay.textContent = `Total Hubs: ${hubs.length}`;
-                    hubs.forEach(hub => {
-                        const listItem = document.createElement('li');
-                        listItem.textContent = `${hub.name} (${hub.findability})`;
-                        hubsList.appendChild(listItem);
-                    });
-                } else {
-                    hubCountDisplay.textContent = 'No hubs found.';
-                }
-            }
-
-        } else {
-            apiResponseBox.textContent = `--- Error Response ---\n${JSON.stringify(data, null, 2)}`;
-            showMessage('GraphQL query failed. Check the console for details.', 'error');
-            hubsList.innerHTML = '';
-            hubCountDisplay.textContent = 'Failed to load hubs.';
-        }
-
-    } catch (error) {
-        console.error('API call error:', error);
-        showMessage(`API call failed: ${error.message}. Check the console for details.`, 'error');
-        hubsList.innerHTML = '';
-        hubCountDisplay.textContent = 'Failed to load hubs.';
-    }
-}
-
-// --- Billing  ---
-/*
--Encodes client info in Base64 and redirects to Clearly.Hub Billing Component.
--Requires login, so it checks for the access token first.
-*/
-function handleManageBilling() {
-    const accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) {
-        showMessage('You must be logged in to manage your subscription. Please log in first.', 'error');
-        return;
-    }
-    
-    const payload = btoa(JSON.stringify({
-        actions: ["SELECT_SUBSCRIPTION"],
-        origin: REDIRECT_URI,
-        client_id: CLIENT_ID,
-    }));
-
-    const billingUrl = `${BASE_COMPONENT_URL}${payload}`;
-    showMessage('Redirecting to the Clearly.Hub Billing Component...', 'info');
-    window.location.href = billingUrl;
-}
-
-// --- Event Listeners and Actions ---
-launchAppBtn.addEventListener('click', () => {
-    setAppView(true);
-});
-
-// Function that can take the Base64-encoded string, decode it, and parse the JSON (to understand return data)
-function parseReturnData(fullUrl) {
-    try {
-        const urlParams = new URLSearchParams(new URL(fullUrl).search);
-        const dataParam = urlParams.get('data');
-        if (!dataParam) {
-            return null; // No data parameter found
-        }
-        const decoded = atob(dataParam);
-        return JSON.parse(decoded);
-    } catch (error) {
-        console.error("Failed to parse billing return data:", error);
+        const response = await fetch(capabilitiesUrl);
+        if (!response.ok) throw new Error(`GetCapabilities failed: ${response.status}`);
+        const xmlText = await response.text();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+        const layerNameElement = xmlDoc.querySelector("Layer[queryable='1'] > Name") || xmlDoc.querySelector("Layer > Name");
+        if (layerNameElement) return layerNameElement.textContent;
+        throw new Error("Could not find layer name in Capabilities.");
+    } catch (e) {
+        console.error("Failed to get WMS Capabilities:", e);
         return null;
     }
 }
 
+async function populateDatasetDropdowns() {
+    loader.classList.remove('hidden');
+    try {
+        const createOption = dataset => {
+            const isWms = dataset.resources.some(r => r.format === 'WMS');
+            const optionText = isWms ? `${dataset.title} (WMS)` : dataset.title;
+            const option = new Option(optionText, dataset._id);
+            if (!isWms) option.disabled = true;
+            return option;
+        };
+        hubDatasetsSelect.innerHTML = '<option value="">Select a dataset...</option>';
+        allDatasetsSelect.innerHTML = '<option value="">Select a dataset...</option>';
+        const query = `query datasets($limit:Int,$query:DatasetsFilterQueryInput,$activeHubId:String,$sort:String){datasets(limit:$limit,query:$query,activeHubId:$activeHubId,sort:$sort){results{_id title resources{format}}}}`;
+        const hubVars = { limit: 50, activeHubId: ACTIVE_HUB_ID, query: { hubId: ACTIVE_HUB_ID, datasetHubStatus: ["OWNED_BY_HUB", "FINDABLE_BY_HUB", "FAVORITE"] } };
+        const hubData = await graphqlRequest(query, hubVars);
+        hubData.datasets.results.forEach(d => hubDatasetsSelect.add(createOption(d)));
+        const allVars = { limit: 50, activeHubId: ACTIVE_HUB_ID, query: { tags: [], ownerHubId: "", formats: [], withDefinedGeoExtent: false }, sort: "-score" };
+        const allData = await graphqlRequest(query, allVars);
+        allData.datasets.results.forEach(d => allDatasetsSelect.add(createOption(d)));
+    } catch (e) {
+        console.error("Failed to fetch datasets:", e);
+    } finally {
+        loader.classList.add('hidden');
+    }
+}
+
+async function handleDatasetSelection(datasetId) {
+    if (!datasetId) {
+        if (wmsLayer) map.removeLayer(wmsLayer);
+        return;
+    }
+    loader.classList.remove('hidden');
+    mapContainer.style.opacity = '0.5';
+    try {
+        const query = `query Dataset($_id:String!,$activeHubId:String){dataset(_id:$_id,activeHubId:$activeHubId){spatial{coordinates}resources{url format}}}`;
+        const variables = { _id: datasetId, activeHubId: ACTIVE_HUB_ID };
+        const data = await graphqlRequest(query, variables);
+        const dataset = data.dataset;
+        const wmsResource = dataset.resources.find(r => r.format === 'WMS');
+        if (wmsResource && wmsResource.url) {
+            const layerName = await getWmsLayerNameFromCapabilities(wmsResource.url);
+            if (layerName) {
+                addWmsLayerToMap(wmsResource.url, layerName);
+            } else {
+                alert("Could not automatically determine the layer name for this WMS service.");
+            }
+        } else {
+            if (wmsLayer) map.removeLayer(wmsLayer);
+            console.warn("No WMS resource found.");
+        }
+        if (dataset.spatial && dataset.spatial.coordinates) {
+            zoomToDatasetExtent(dataset.spatial.coordinates);
+        }
+    } catch (e) {
+        console.error("Failed to fetch dataset details:", e);
+    } finally {
+        loader.classList.add('hidden');
+        mapContainer.style.opacity = '1';
+    }
+}
+
+// --- Subscription & UI ---
+function updateFeaturesDisplay(subscriptionName) {
+    featuresList.innerHTML = '';
+    const features = SUBSCRIPTION_FEATURES[subscriptionName] || ["Login to see your features."];
+    features.forEach(featureText => {
+        const li = document.createElement('li');
+        li.textContent = featureText;
+        featuresList.appendChild(li);
+    });
+    markerControls.classList.remove('hidden');
+    bezierControls.classList.remove('hidden');
+    if (subscriptionName === 'STEAK' || subscriptionName === 'WAGYU') {
+        markerUnlocked.classList.remove('hidden');
+        markerLocked.classList.add('hidden');
+    } else {
+        markerUnlocked.classList.add('hidden');
+        markerLocked.classList.remove('hidden');
+    }
+    if (subscriptionName === 'WAGYU') {
+        bezierUnlocked.classList.remove('hidden');
+        bezierLocked.classList.add('hidden');
+    } else {
+        bezierUnlocked.classList.add('hidden');
+        bezierLocked.classList.remove('hidden');
+    }
+}
+
+function updateSubscriptionDisplay() {
+    const subName = (sessionStorage.getItem('subscriptionName') || 'None').toUpperCase();
+    subscriptionNameSpan.textContent = subName === 'NONE' ? 'None' : subName;
+    updateFeaturesDisplay(subName);
+}
+
+function setLoggedInView(isLoggedIn) {
+    if (isLoggedIn) {
+        appContainer.classList.remove('app-locked');
+        loginOverlay.classList.add('hidden');
+        logoutBtn.classList.remove('hidden');
+        hubDatasetsSelect.disabled = false;
+        allDatasetsSelect.disabled = false;
+        manageBillingBtn.disabled = false;
+        initializeMap();
+        updateSubscriptionDisplay();
+        populateDatasetDropdowns();
+    } else {
+        appContainer.classList.add('app-locked');
+        loginOverlay.classList.remove('hidden');
+        logoutBtn.classList.add('hidden');
+        hubDatasetsSelect.disabled = true;
+        allDatasetsSelect.disabled = true;
+        manageBillingBtn.disabled = true;
+        if (map) {
+            map.remove();
+            map = null;
+        }
+        updateSubscriptionDisplay();
+    }
+}
+
+function parseBillingData(dataParam) {
+    try {
+        const decoded = atob(dataParam);
+        return JSON.parse(decoded);
+    } catch (e) {
+        console.error("Failed to parse billing return data:", e);
+        return null;
+    }
+}
+
+async function initiateLogin() {
+    const verifier = generateRandomString(128);
+    sessionStorage.setItem('pkce_code_verifier', verifier);
+    const challenge = await generateCodeChallenge(verifier);
+    const url = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/authorize?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=openid+profile+email&code_challenge=${challenge}&code_challenge_method=S256`;
+    window.location.href = url;
+}
+
+async function exchangeCodeForTokens(code, verifier) {
+    const body = new URLSearchParams({ grant_type: 'authorization_code', client_id: CLIENT_ID, code: code, redirect_uri: REDIRECT_URI, code_verifier: verifier });
+    try {
+        const response = await fetch(OAUTH_TOKEN_ENDPOINT, { method: 'POST', mode: 'cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error_description || 'Token exchange failed');
+        }
+        const data = await response.json();
+        localStorage.setItem('accessToken', data.access_token);
+        localStorage.setItem('idToken', data.id_token);
+        setLoggedInView(true);
+    } catch (e) {
+        console.error('Token exchange error:', e);
+        setLoggedInView(false);
+    }
+}
+
+function handleLogout() {
+    localStorage.clear();
+    sessionStorage.clear();
+    const url = `https://${COGNITO_USER_POOL_DOMAIN}/logout?client_id=${CLIENT_ID}&logout_uri=${encodeURIComponent(REDIRECT_URI)}`;
+    window.location.href = url;
+}
+
+function handleManageBilling() {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+        console.error('You must be logged in.');
+        return;
+    }
+    const payload = btoa(JSON.stringify({ actions: ["SELECT_SUBSCRIPTION"], origin: REDIRECT_URI, client_id: CLIENT_ID, }));
+    window.location.href = `${BASE_COMPONENT_URL}${payload}`;
+}
+
+// --- Event Listeners & Page Load Logic ---
 loginBtn.addEventListener('click', initiateLogin);
 logoutBtn.addEventListener('click', handleLogout);
-callPublicApiBtn.addEventListener('click', () => getHubs(false));
-callPrivateApiBtn.addEventListener('click', () => getHubs(true));
 manageBillingBtn.addEventListener('click', handleManageBilling);
+addMarkerBtn.addEventListener('click', toggleAddMarkerMode);
+drawLineBtn.addEventListener('click', toggleDrawLineMode);
+finishLineBtn.addEventListener('click', finishDrawingLine);
+hubDatasetsSelect.addEventListener('change', (e) => handleDatasetSelection(e.target.value));
+allDatasetsSelect.addEventListener('change', (e) => handleDatasetSelection(e.target.value));
 
-// --- Page Load Logic ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Set default values for input fields from localStorage or predefined defaults
-    clientIdInput.value = localStorage.getItem('clientId') || DEFAULT_CLIENT_ID;
-    redirectUriInput.value = localStorage.getItem('redirectUri') || DEFAULT_REDIRECT_URI;
-    
-    // Update global variables with the loaded values
-    CLIENT_ID = clientIdInput.value;
-    REDIRECT_URI = redirectUriInput.value;
-
+    ICONS.forEach(icon => iconSelect.add(new Option(icon.charAt(0).toUpperCase() + icon.slice(1), icon)));
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
-    const dataFromBilling = urlParams.get('data'); // Capture the data parameter
-
-    // --- Process URL parameters in order of priority ---
-    if (code && codeVerifier) {
-        // This is the initial login flow, which is the highest priority.
+    const dataFromBilling = urlParams.get('data');
+    if (code || dataFromBilling) {
         window.history.replaceState({}, document.title, window.location.pathname);
-        exchangeCodeForTokens(code, codeVerifier);
-        sessionStorage.removeItem('pkce_code_verifier');
-    } else if (dataFromBilling) {
-        // This is the return from the billing component.
-        // It must be checked before a regular accessToken check.
-        const subscriptionDetails = parseReturnData(window.location.href);
-        if (subscriptionDetails && subscriptionDetails.subscription) {
-            const subName = subscriptionDetails.subscription.name;
-            const hubName = subscriptionDetails.subscribedHub.name;
-            showMessage(`Subscription selected: "${subName}" for hub "${hubName}".`, 'success');
-        } else {
-            showMessage('Failed to retrieve subscription details.', 'error');
+    }
+    if (dataFromBilling) {
+        const d = parseBillingData(dataFromBilling);
+        if (d && d.subscription && d.subscription.name) {
+            sessionStorage.setItem('subscriptionName', d.subscription.name.toUpperCase());
         }
-        window.history.replaceState({}, document.title, window.location.pathname); // Clean up the URL
-        setAppView(true);
-        setLoggedInView(true);
+    }
+    if (code && codeVerifier) {
+        exchangeCodeForTokens(code, codeVerifier);
     } else if (localStorage.getItem('accessToken')) {
-        // This is the case for a regular page load where the user is already logged in.
-        accessTokenDisplay.textContent = localStorage.getItem('accessToken');
-        idTokenDisplay.textContent = localStorage.getItem('idToken');
         setLoggedInView(true);
-        showMessage('You are already logged in.', 'info');
     } else {
-        // This is the default case if the user is logged out.
-        setAppView(false);
         setLoggedInView(false);
-        showMessage('You are logged out. Please log in to get started.', 'info');
     }
 });
