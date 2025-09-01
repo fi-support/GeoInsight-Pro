@@ -35,7 +35,8 @@ const ICONS = ['star', 'home', 'flag', 'car', 'glass', 'music', 'road'];
 const MARKER_COLORS = ['red', 'darkred', 'orange', 'green', 'darkgreen', 'blue', 'purple', 'darkpurple', 'cadetblue'];
 const SUBSCRIPTION_FEATURES = { BREAD: ["Basic Map Access"], STEAK: ["Basic Map Access", "Awesome Markers"], WAGYU: ["Basic Map Access", "Awesome Markers", "Animated Line Drawing"] };
 const CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
-const REDIRECT_URI = "http://127.0.0.1:5500/";
+//const REDIRECT_URI = "http://127.0.0.1:5500/";
+const REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
 const COGNITO_USER_POOL_DOMAIN = "auth.clearly.app";
 const OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
@@ -156,20 +157,39 @@ function toggleDrawLineMode() {
 }
 
 function finishDrawingLine() {
-    if (linePoints.length < 2) {
-        alert("Please add at least two points to draw a line.");
-        return;
+  if (linePoints.length < 2) {
+    alert("Please add at least two points to draw a line.");
+    return;
+  }
+  if (!L.bezier) {
+    console.error("Leaflet.Bezier plugin not loaded");
+    alert("Bezier plugin failed to load. Check the script tag URL.");
+    return;
+  }
+
+  const start = linePoints[0];
+  const end = linePoints[linePoints.length - 1];
+
+  const bezier = L.bezier(
+    {
+      path: [[start, end]],
+      icon: { path: PLANE_ICON_SVG }
+    },
+    {
+      color: '#8b5cf6',
+      dashArray: 8,
+      weight: 2,
+      opacity: 0.9,
+      iconTravelLength: 1,
+      iconMaxWidth: 30,
+      iconMaxHeight: 30,
+      fullAnimatedTime: 7000,
+      easeOutPiece: 4,
+      easeOutTime: 2500
     }
-    L.bezier({
-        path: [linePoints],
-        icon: {
-            path: PLANE_ICON_SVG,
-            iconTravelLength: 1,
-            iconMaxWidth: 30,
-            iconMaxHeight: 30
-        }
-    }).addTo(map);
-    toggleDrawLineMode();
+  ).addTo(map);
+
+  toggleDrawLineMode();
 }
 
 // --- API / Data Fetching Functions ---
@@ -184,6 +204,32 @@ async function graphqlRequest(query, variables) {
         throw new Error(result.errors[0].message);
     }
     return result.data;
+}
+
+// NEW: helper to fetch all pages
+async function fetchAllDatasets(variablesBase) {
+    const query = `
+      query datasets($limit:Int,$offset:Int,$query:DatasetsFilterQueryInput,$activeHubId:String,$sort:String){
+        datasets(limit:$limit, offset:$offset, query:$query, activeHubId:$activeHubId, sort:$sort){
+          results{ _id title resources{ format } }
+        }
+      }`;
+
+    const allResults = [];
+    let offset = 0;
+    const pageSize = 50;
+
+    while (true) {
+        const vars = { ...variablesBase, limit: pageSize, offset };
+        const data = await graphqlRequest(query, vars);
+        const results = data.datasets.results;
+        if (!results.length) break;
+        allResults.push(...results);
+        if (results.length < pageSize) break;
+        offset += pageSize;
+    }
+
+    return allResults;
 }
 
 async function getWmsLayerNameFromCapabilities(wmsUrl) {
@@ -216,13 +262,21 @@ async function populateDatasetDropdowns() {
         };
         hubDatasetsSelect.innerHTML = '<option value="">Select a dataset...</option>';
         allDatasetsSelect.innerHTML = '<option value="">Select a dataset...</option>';
-        const query = `query datasets($limit:Int,$query:DatasetsFilterQueryInput,$activeHubId:String,$sort:String){datasets(limit:$limit,query:$query,activeHubId:$activeHubId,sort:$sort){results{_id title resources{format}}}}`;
-        const hubVars = { limit: 50, activeHubId: ACTIVE_HUB_ID, query: { hubId: ACTIVE_HUB_ID, datasetHubStatus: ["OWNED_BY_HUB", "FINDABLE_BY_HUB", "FAVORITE"] } };
-        const hubData = await graphqlRequest(query, hubVars);
-        hubData.datasets.results.forEach(d => hubDatasetsSelect.add(createOption(d)));
-        const allVars = { limit: 50, activeHubId: ACTIVE_HUB_ID, query: { tags: [], ownerHubId: "", formats: [], withDefinedGeoExtent: false }, sort: "-score" };
-        const allData = await graphqlRequest(query, allVars);
-        allData.datasets.results.forEach(d => allDatasetsSelect.add(createOption(d)));
+
+        const hubVars = {
+            activeHubId: ACTIVE_HUB_ID,
+            query: { hubId: ACTIVE_HUB_ID, datasetHubStatus: ["OWNED_BY_HUB", "FINDABLE_BY_HUB", "FAVORITE"] }
+        };
+        const hubResults = await fetchAllDatasets(hubVars);
+        hubResults.forEach(d => hubDatasetsSelect.add(createOption(d)));
+
+        const allVars = {
+            activeHubId: ACTIVE_HUB_ID,
+            query: { tags: [], ownerHubId: "", formats: [], withDefinedGeoExtent: false },
+            sort: "-score"
+        };
+        const allResults = await fetchAllDatasets(allVars);
+        allResults.forEach(d => allDatasetsSelect.add(createOption(d)));
     } catch (e) {
         console.error("Failed to fetch datasets:", e);
     } finally {
@@ -268,7 +322,7 @@ async function handleDatasetSelection(datasetId) {
 // --- Subscription & UI ---
 function updateFeaturesDisplay(subscriptionName) {
     featuresList.innerHTML = '';
-    const features = SUBSCRIPTION_FEATURES[subscriptionName] || ["Login to see your features."];
+    const features = SUBSCRIPTION_FEATURES[subscriptionName] || ["Select a subscription to see your features."];
     features.forEach(featureText => {
         const li = document.createElement('li');
         li.textContent = featureText;
