@@ -21,6 +21,7 @@ const bezierUnlocked = document.getElementById('bezier-unlocked');
 const bezierLocked = document.getElementById('bezier-locked');
 const drawLineBtn = document.getElementById('draw-line-btn');
 const finishLineBtn = document.getElementById('finish-line-btn');
+const functionList = document.getElementById('function-list');
 
 // --- State & Config Variables ---
 let map = null;
@@ -33,15 +34,49 @@ let markerColorIndex = 0;
 const ACTIVE_HUB_ID = "65f03b46fe2ac522c6ac7b95";
 const ICONS = ['star', 'home', 'flag', 'car', 'glass', 'music', 'road'];
 const MARKER_COLORS = ['red', 'darkred', 'orange', 'green', 'darkgreen', 'blue', 'purple', 'darkpurple', 'cadetblue'];
-const SUBSCRIPTION_FEATURES = { BREAD: ["Basic Map Access"], STEAK: ["Basic Map Access", "Awesome Markers"], WAGYU: ["Basic Map Access", "Awesome Markers", "Animated Line Drawing"] };
+const SUBSCRIPTION_FEATURES = { 
+    BREAD: ["Basic Map Access"], 
+    STEAK: ["Basic Map Access", "Awesome Markers"], 
+    WAGYU: ["Basic Map Access", "Awesome Markers", "Animated Line Drawing"] 
+};
 const CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
-//const REDIRECT_URI = "http://127.0.0.1:5500/";
-const REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
+const REDIRECT_URI = "http://127.0.0.1:5500/";
+//const REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
 const COGNITO_USER_POOL_DOMAIN = "auth.clearly.app";
 const OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
 const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
 const PLANE_ICON_SVG = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M21.4,12.6l-5.7-1.3L13.4,6c-0.2-0.5-0.9-0.5-1.1,0L10,11.3l-5.7,1.3c-0.5,0.1-0.5,0.8,0,0.9l5.7,1.3L12.3,20c0.2,0.5,0.9,0.5,1.1,0l2.3-5.3l5.7-1.3C21.9,13.4,21.9,12.7,21.4,12.6z"/></svg>')}`;
+
+// --- Helper to highlight functions in script panel ---
+function scrollToFunction(fnName) {
+    const jsPanel = document.getElementById('js-code');
+    if (!jsPanel) return;
+    const code = jsPanel.textContent;
+    const fnRegex = new RegExp(`(async\\s+)?function\\s+${fnName}\\s*\\([^)]*\\)\\s*\\{[\\s\\S]*?\\n\\}`, 'm');
+    const match = code.match(fnRegex);
+    if (!match) return;
+    const highlightedCode = code.replace(fnRegex, `<span class="highlighted-line">${match[0]}</span>`);
+    jsPanel.innerHTML = highlightedCode;
+    jsPanel.style.whiteSpace = 'pre';
+    const span = jsPanel.querySelector('.highlighted-line');
+    if (span) span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// --- Extract and list functions dynamically ---
+function listFunctionsInPanel(codeText) {
+    functionList.innerHTML = '';
+    const fnRegex = /(?:async\s+)?function\s+([a-zA-Z0-9_]+)\s*\(/g;
+    let match;
+    while ((match = fnRegex.exec(codeText)) !== null) {
+        const fnName = match[1];
+        const li = document.createElement('li');
+        li.textContent = fnName;
+        li.className = 'cursor-pointer text-blue-600 hover:underline';
+        li.addEventListener('click', () => scrollToFunction(fnName));
+        functionList.appendChild(li);
+    }
+}
 
 // --- PKCE Helper Functions ---
 function generateRandomString(length) {
@@ -52,10 +87,12 @@ function generateRandomString(length) {
     }
     return text;
 }
+
 async function sha256(plain) {
     const data = new TextEncoder().encode(plain);
     return window.crypto.subtle.digest('SHA-256', data);
 }
+
 function base64urlencode(buffer) {
     let s = '';
     const bytes = new Uint8Array(buffer);
@@ -64,6 +101,7 @@ function base64urlencode(buffer) {
     }
     return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
+
 async function generateCodeChallenge(verifier) {
     const hashed = await sha256(verifier);
     return base64urlencode(hashed);
@@ -74,8 +112,9 @@ function initializeMap() {
     if (map) return;
     map = L.map(mapContainer).setView([52.1601, 4.4970], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+
     const subscriptionName = (sessionStorage.getItem('subscriptionName') || 'BREAD').toUpperCase();
     let markerOptions = {};
     if (subscriptionName === 'STEAK') {
@@ -84,13 +123,12 @@ function initializeMap() {
         markerOptions.icon = L.AwesomeMarkers.icon({ icon: 'rocket', prefix: 'fa', markerColor: 'darkpurple' });
     }
     L.marker([52.1601, 4.4970], markerOptions).addTo(map).bindPopup(`Leiden (${subscriptionName} Tier)`);
+
     map.on('click', onMapClick);
 }
 
 function addWmsLayerToMap(url, layerName) {
-    if (wmsLayer) {
-        map.removeLayer(wmsLayer);
-    }
+    if (wmsLayer) map.removeLayer(wmsLayer);
     const baseUrl = url.split('?')[0];
     wmsLayer = L.tileLayer.wms(baseUrl, {
         layers: layerName,
@@ -157,39 +195,30 @@ function toggleDrawLineMode() {
 }
 
 function finishDrawingLine() {
-  if (linePoints.length < 2) {
-    alert("Please add at least two points to draw a line.");
-    return;
-  }
-  if (!L.bezier) {
-    console.error("Leaflet.Bezier plugin not loaded");
-    alert("Bezier plugin failed to load. Check the script tag URL.");
-    return;
-  }
-
-  const start = linePoints[0];
-  const end = linePoints[linePoints.length - 1];
-
-  const bezier = L.bezier(
-    {
-      path: [[start, end]],
-      icon: { path: PLANE_ICON_SVG }
-    },
-    {
-      color: '#8b5cf6',
-      dashArray: 8,
-      weight: 2,
-      opacity: 0.9,
-      iconTravelLength: 1,
-      iconMaxWidth: 30,
-      iconMaxHeight: 30,
-      fullAnimatedTime: 7000,
-      easeOutPiece: 4,
-      easeOutTime: 2500
+    if (linePoints.length < 2) {
+        alert("Please add at least two points to draw a line.");
+        return;
     }
-  ).addTo(map);
-
-  toggleDrawLineMode();
+    if (!L.bezier) {
+        console.error("Leaflet.Bezier plugin not loaded");
+        alert("Bezier plugin failed to load. Check the script tag URL.");
+        return;
+    }
+    const start = linePoints[0];
+    const end = linePoints[linePoints.length - 1];
+    const bezier = L.bezier({ path: [[start, end]], icon: { path: PLANE_ICON_SVG } }, {
+        color: '#8b5cf6',
+        dashArray: 8,
+        weight: 2,
+        opacity: 0.9,
+        iconTravelLength: 1,
+        iconMaxWidth: 30,
+        iconMaxHeight: 30,
+        fullAnimatedTime: 7000,
+        easeOutPiece: 4,
+        easeOutTime: 2500
+    }).addTo(map);
+    toggleDrawLineMode();
 }
 
 // --- API / Data Fetching Functions ---
@@ -199,26 +228,15 @@ async function graphqlRequest(query, variables) {
     const response = await fetch(GRAPHQL_ENDPOINT, { method: "POST", headers, body: JSON.stringify({ query, variables }) });
     if (!response.ok) throw new Error(`GraphQL request failed: ${response.status}`);
     const result = await response.json();
-    if (result.errors) {
-        console.error("GraphQL Error:", result.errors);
-        throw new Error(result.errors[0].message);
-    }
+    if (result.errors) throw new Error(result.errors[0].message);
     return result.data;
 }
 
-// NEW: helper to fetch all pages
 async function fetchAllDatasets(variablesBase) {
-    const query = `
-      query datasets($limit:Int,$offset:Int,$query:DatasetsFilterQueryInput,$activeHubId:String,$sort:String){
-        datasets(limit:$limit, offset:$offset, query:$query, activeHubId:$activeHubId, sort:$sort){
-          results{ _id title resources{ format } }
-        }
-      }`;
-
+    const query = `query datasets($limit:Int,$offset:Int,$query:DatasetsFilterQueryInput,$activeHubId:String,$sort:String){datasets(limit:$limit, offset:$offset, query:$query, activeHubId:$activeHubId, sort:$sort){ results{ _id title resources{ format } } } }`;
     const allResults = [];
     let offset = 0;
     const pageSize = 50;
-
     while (true) {
         const vars = { ...variablesBase, limit: pageSize, offset };
         const data = await graphqlRequest(query, vars);
@@ -228,7 +246,6 @@ async function fetchAllDatasets(variablesBase) {
         if (results.length < pageSize) break;
         offset += pageSize;
     }
-
     return allResults;
 }
 
@@ -265,7 +282,7 @@ async function populateDatasetDropdowns() {
 
         const hubVars = {
             activeHubId: ACTIVE_HUB_ID,
-            query: { hubId: ACTIVE_HUB_ID, datasetHubStatus: ["OWNED_BY_HUB", "FINDABLE_BY_HUB", "FAVORITE"] }
+            query: { hubId: ACTIVE_HUB_ID, datasetHubStatus: ["OWNED_BY_HUB","FINDABLE_BY_HUB","FAVORITE"] }
         };
         const hubResults = await fetchAllDatasets(hubVars);
         hubResults.forEach(d => hubDatasetsSelect.add(createOption(d)));
@@ -285,10 +302,7 @@ async function populateDatasetDropdowns() {
 }
 
 async function handleDatasetSelection(datasetId) {
-    if (!datasetId) {
-        if (wmsLayer) map.removeLayer(wmsLayer);
-        return;
-    }
+    if (!datasetId) { if (wmsLayer) map.removeLayer(wmsLayer); return; }
     loader.classList.remove('hidden');
     mapContainer.style.opacity = '0.5';
     try {
@@ -299,18 +313,10 @@ async function handleDatasetSelection(datasetId) {
         const wmsResource = dataset.resources.find(r => r.format === 'WMS');
         if (wmsResource && wmsResource.url) {
             const layerName = await getWmsLayerNameFromCapabilities(wmsResource.url);
-            if (layerName) {
-                addWmsLayerToMap(wmsResource.url, layerName);
-            } else {
-                alert("Could not automatically determine the layer name for this WMS service.");
-            }
-        } else {
-            if (wmsLayer) map.removeLayer(wmsLayer);
-            console.warn("No WMS resource found.");
-        }
-        if (dataset.spatial && dataset.spatial.coordinates) {
-            zoomToDatasetExtent(dataset.spatial.coordinates);
-        }
+            if (layerName) addWmsLayerToMap(wmsResource.url, layerName);
+            else alert("Could not automatically determine the layer name for this WMS service. Please select another dataset.");
+        } else if (wmsLayer) map.removeLayer(wmsLayer);
+        if (dataset.spatial && dataset.spatial.coordinates) zoomToDatasetExtent(dataset.spatial.coordinates);
     } catch (e) {
         console.error("Failed to fetch dataset details:", e);
     } finally {
@@ -323,27 +329,16 @@ async function handleDatasetSelection(datasetId) {
 function updateFeaturesDisplay(subscriptionName) {
     featuresList.innerHTML = '';
     const features = SUBSCRIPTION_FEATURES[subscriptionName] || ["Select a subscription to see your features."];
-    features.forEach(featureText => {
-        const li = document.createElement('li');
-        li.textContent = featureText;
-        featuresList.appendChild(li);
-    });
+    features.forEach(f => { const li = document.createElement('li'); li.textContent = f; featuresList.appendChild(li); });
+
     markerControls.classList.remove('hidden');
     bezierControls.classList.remove('hidden');
-    if (subscriptionName === 'STEAK' || subscriptionName === 'WAGYU') {
-        markerUnlocked.classList.remove('hidden');
-        markerLocked.classList.add('hidden');
-    } else {
-        markerUnlocked.classList.add('hidden');
-        markerLocked.classList.remove('hidden');
-    }
-    if (subscriptionName === 'WAGYU') {
-        bezierUnlocked.classList.remove('hidden');
-        bezierLocked.classList.add('hidden');
-    } else {
-        bezierUnlocked.classList.add('hidden');
-        bezierLocked.classList.remove('hidden');
-    }
+
+    if (subscriptionName === 'STEAK' || subscriptionName === 'WAGYU') { markerUnlocked.classList.remove('hidden'); markerLocked.classList.add('hidden'); }
+    else { markerUnlocked.classList.add('hidden'); markerLocked.classList.remove('hidden'); }
+
+    if (subscriptionName === 'WAGYU') { bezierUnlocked.classList.remove('hidden'); bezierLocked.classList.add('hidden'); }
+    else { bezierUnlocked.classList.add('hidden'); bezierLocked.classList.remove('hidden'); }
 }
 
 function updateSubscriptionDisplay() {
@@ -370,22 +365,19 @@ function setLoggedInView(isLoggedIn) {
         hubDatasetsSelect.disabled = true;
         allDatasetsSelect.disabled = true;
         manageBillingBtn.disabled = true;
-        if (map) {
-            map.remove();
-            map = null;
-        }
+        if (map) { map.remove(); map = null; }
         updateSubscriptionDisplay();
     }
 }
 
-function parseBillingData(dataParam) {
-    try {
-        const decoded = atob(dataParam);
-        return JSON.parse(decoded);
-    } catch (e) {
-        console.error("Failed to parse billing return data:", e);
-        return null;
-    }
+// --- OAuth & Billing ---
+function parseBillingData(dataParam) { 
+    try { 
+        return JSON.parse(atob(dataParam)); 
+    } catch (e) { 
+        console.error("Failed to parse billing return data:", e); 
+        return null; 
+    } 
 }
 
 async function initiateLogin() {
@@ -397,21 +389,15 @@ async function initiateLogin() {
 }
 
 async function exchangeCodeForTokens(code, verifier) {
-    const body = new URLSearchParams({ grant_type: 'authorization_code', client_id: CLIENT_ID, code: code, redirect_uri: REDIRECT_URI, code_verifier: verifier });
+    const body = new URLSearchParams({ grant_type: 'authorization_code', client_id: CLIENT_ID, code, redirect_uri: REDIRECT_URI, code_verifier: verifier });
     try {
         const response = await fetch(OAUTH_TOKEN_ENDPOINT, { method: 'POST', mode: 'cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error_description || 'Token exchange failed');
-        }
+        if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error_description || 'Token exchange failed'); }
         const data = await response.json();
         localStorage.setItem('accessToken', data.access_token);
         localStorage.setItem('idToken', data.id_token);
         setLoggedInView(true);
-    } catch (e) {
-        console.error('Token exchange error:', e);
-        setLoggedInView(false);
-    }
+    } catch (e) { console.error('Token exchange error:', e); setLoggedInView(false); }
 }
 
 function handleLogout() {
@@ -423,44 +409,43 @@ function handleLogout() {
 
 function handleManageBilling() {
     const token = localStorage.getItem('accessToken');
-    if (!token) {
-        console.error('You must be logged in.');
-        return;
-    }
-    const payload = btoa(JSON.stringify({ actions: ["SELECT_SUBSCRIPTION"], origin: REDIRECT_URI, client_id: CLIENT_ID, }));
+    if (!token) { console.error('You must be logged in.'); return; }
+    const payload = btoa(JSON.stringify({ actions: ["SELECT_SUBSCRIPTION"], origin: REDIRECT_URI, client_id: CLIENT_ID }));
     window.location.href = `${BASE_COMPONENT_URL}${payload}`;
 }
 
-// --- Event Listeners & Page Load Logic ---
+// --- Event Listeners ---
 loginBtn.addEventListener('click', initiateLogin);
 logoutBtn.addEventListener('click', handleLogout);
 manageBillingBtn.addEventListener('click', handleManageBilling);
 addMarkerBtn.addEventListener('click', toggleAddMarkerMode);
 drawLineBtn.addEventListener('click', toggleDrawLineMode);
 finishLineBtn.addEventListener('click', finishDrawingLine);
-hubDatasetsSelect.addEventListener('change', (e) => handleDatasetSelection(e.target.value));
-allDatasetsSelect.addEventListener('change', (e) => handleDatasetSelection(e.target.value));
+hubDatasetsSelect.addEventListener('change', e => handleDatasetSelection(e.target.value));
+allDatasetsSelect.addEventListener('change', e => handleDatasetSelection(e.target.value));
 
+// --- Script Panel Injection & Page Load Logic ---
 document.addEventListener('DOMContentLoaded', () => {
+    // Populate icons
     ICONS.forEach(icon => iconSelect.add(new Option(icon.charAt(0).toUpperCase() + icon.slice(1), icon)));
+
+    // Login button
+    const loginBtn = document.getElementById('login-btn');
+    loginBtn.addEventListener('click', async () => {
+        await initiateLogin();
+    });
+
+    // OAuth / billing redirect handling
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
     const dataFromBilling = urlParams.get('data');
-    if (code || dataFromBilling) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    if (code || dataFromBilling) window.history.replaceState({}, document.title, window.location.pathname);
     if (dataFromBilling) {
         const d = parseBillingData(dataFromBilling);
-        if (d && d.subscription && d.subscription.name) {
-            sessionStorage.setItem('subscriptionName', d.subscription.name.toUpperCase());
-        }
+        if (d && d.subscription && d.subscription.name) sessionStorage.setItem('subscriptionName', d.subscription.name.toUpperCase());
     }
-    if (code && codeVerifier) {
-        exchangeCodeForTokens(code, codeVerifier);
-    } else if (localStorage.getItem('accessToken')) {
-        setLoggedInView(true);
-    } else {
-        setLoggedInView(false);
-    }
+    if (code && codeVerifier) exchangeCodeForTokens(code, codeVerifier);
+    else if (localStorage.getItem('accessToken')) setLoggedInView(true);
+    else setLoggedInView(false);
 });
