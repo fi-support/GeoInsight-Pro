@@ -23,6 +23,11 @@ const drawLineBtn = document.getElementById('draw-line-btn');
 const finishLineBtn = document.getElementById('finish-line-btn');
 const functionList = document.getElementById('function-list');
 
+// Backend Simulation References
+const simulationControls = document.getElementById('simulation-controls');
+const runSimulationBtn = document.getElementById('run-simulation-btn');
+const backendPayloadCode = document.getElementById('backend-payload');
+
 // --- State & Config Variables ---
 let map = null;
 let wmsLayer = null;
@@ -41,44 +46,13 @@ const SUBSCRIPTION_FEATURES = {
 };
 const CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
 const REDIRECT_URI = "http://127.0.0.1:5500/";
-//const REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
 const COGNITO_USER_POOL_DOMAIN = "auth.clearly.app";
 const OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
 const GRAPHQL_ENDPOINT = "https://hub.clearly.app/graphql";
 const PLANE_ICON_SVG = `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M21.4,12.6l-5.7-1.3L13.4,6c-0.2-0.5-0.9-0.5-1.1,0L10,11.3l-5.7,1.3c-0.5,0.1-0.5,0.8,0,0.9l5.7,1.3L12.3,20c0.2,0.5,0.9,0.5,1.1,0l2.3-5.3l5.7-1.3C21.9,13.4,21.9,12.7,21.4,12.6z"/></svg>')}`;
 
-// --- Helper to highlight functions in script panel ---
-function scrollToFunction(fnName) {
-    const jsPanel = document.getElementById('js-code');
-    if (!jsPanel) return;
-    const code = jsPanel.textContent;
-    const fnRegex = new RegExp(`(async\\s+)?function\\s+${fnName}\\s*\\([^)]*\\)\\s*\\{[\\s\\S]*?\\n\\}`, 'm');
-    const match = code.match(fnRegex);
-    if (!match) return;
-    const highlightedCode = code.replace(fnRegex, `<span class="highlighted-line">${match[0]}</span>`);
-    jsPanel.innerHTML = highlightedCode;
-    jsPanel.style.whiteSpace = 'pre';
-    const span = jsPanel.querySelector('.highlighted-line');
-    if (span) span.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-// --- Extract and list functions dynamically ---
-function listFunctionsInPanel(codeText) {
-    functionList.innerHTML = '';
-    const fnRegex = /(?:async\s+)?function\s+([a-zA-Z0-9_]+)\s*\(/g;
-    let match;
-    while ((match = fnRegex.exec(codeText)) !== null) {
-        const fnName = match[1];
-        const li = document.createElement('li');
-        li.textContent = fnName;
-        li.className = 'cursor-pointer text-blue-600 hover:underline';
-        li.addEventListener('click', () => scrollToFunction(fnName));
-        functionList.appendChild(li);
-    }
-}
-
-// --- PKCE Helper Functions ---
+// --- Helper Functions ---
 function generateRandomString(length) {
     const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let text = '';
@@ -355,6 +329,9 @@ function setLoggedInView(isLoggedIn) {
         hubDatasetsSelect.disabled = false;
         allDatasetsSelect.disabled = false;
         manageBillingBtn.disabled = false;
+        
+        if (simulationControls) simulationControls.classList.remove('hidden');
+
         initializeMap();
         updateSubscriptionDisplay();
         populateDatasetDropdowns();
@@ -365,6 +342,9 @@ function setLoggedInView(isLoggedIn) {
         hubDatasetsSelect.disabled = true;
         allDatasetsSelect.disabled = true;
         manageBillingBtn.disabled = true;
+        
+        if (simulationControls) simulationControls.classList.add('hidden');
+
         if (map) { map.remove(); map = null; }
         updateSubscriptionDisplay();
     }
@@ -372,12 +352,7 @@ function setLoggedInView(isLoggedIn) {
 
 // --- OAuth & Billing ---
 function parseBillingData(dataParam) { 
-    try { 
-        return JSON.parse(atob(dataParam)); 
-    } catch (e) { 
-        console.error("Failed to parse billing return data:", e); 
-        return null; 
-    } 
+    try { return JSON.parse(atob(dataParam)); } catch (e) { return null; } 
 }
 
 async function initiateLogin() {
@@ -409,7 +384,7 @@ function handleLogout() {
 
 function handleManageBilling() {
     const token = localStorage.getItem('accessToken');
-    if (!token) { console.error('You must be logged in.'); return; }
+    if (!token) return;
     const payload = btoa(JSON.stringify({ actions: ["SELECT_SUBSCRIPTION"], origin: REDIRECT_URI, client_id: CLIENT_ID }));
     window.location.href = `${BASE_COMPONENT_URL}${payload}`;
 }
@@ -424,16 +399,65 @@ finishLineBtn.addEventListener('click', finishDrawingLine);
 hubDatasetsSelect.addEventListener('change', e => handleDatasetSelection(e.target.value));
 allDatasetsSelect.addEventListener('change', e => handleDatasetSelection(e.target.value));
 
+// --- NEW: Dat.Mobility Backend Simulation ---
+runSimulationBtn.addEventListener('click', async () => {
+    // 1. Get the current bounding box of the map (the "Extent")
+    const bounds = map.getBounds();
+    const boundingBox = [
+        [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
+        [bounds.getNorthEast().lat, bounds.getNorthEast().lng]
+    ];
+
+    // 2. The exact URL you generated from webhook.site!
+    const webhookUrl = "https://webhook.site/d44c2970-a0a6-4494-8de3-7db8b39a015a";
+
+    // 3. Construct the exact JSON payload
+    const simulatedPayload = {
+        scenario: "standard_traffic_flow",
+        bounding_box: boundingBox,
+        platform_context: {
+            hub_id: ACTIVE_HUB_ID,
+            subscription_tier: sessionStorage.getItem('subscriptionName') || 'BREAD',
+            trigger_source: "clearly_hub_map_viewer"
+        }
+    };
+
+    // 4. Update the UI Script Panel so you can see it locally
+    backendPayloadCode.textContent = JSON.stringify(simulatedPayload, null, 2);
+    hljs.highlightElement(backendPayloadCode);
+    const backendTabBtn = document.querySelector('.tab-btn[data-tab="backend"]');
+    if (backendTabBtn) backendTabBtn.click();
+    
+    // 5. ACTUAL NETWORK CALL: Send the data to webhook.site using fetch()
+    try {
+        const response = await fetch(webhookUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                // Notice we are passing the custom OUP headers here:
+                "X-OUP-Hub-ID": ACTIVE_HUB_ID, 
+                "X-OUP-User-ID": "cognito_user_99823",
+                "Authorization": "Bearer <OUP_INTERNAL_SYSTEM_TOKEN>"
+            },
+            body: JSON.stringify(simulatedPayload)
+        });
+
+        console.log("Webhook fired! Server responded with status:", response.status);
+
+        // Visual feedback on the map to confirm it sent successfully
+        const boundsRect = L.rectangle(bounds, {color: "#10b981", weight: 2, fillOpacity: 0.1}).addTo(map);
+        boundsRect.bindPopup("Traffic Simulation Payload Sent! Check your webhook.site dashboard.").openPopup();
+
+    } catch (error) {
+        console.error("Failed to send webhook:", error);
+        alert("Failed to send the request to webhook.site. Check the browser console.");
+    }
+});
+
 // --- Script Panel Injection & Page Load Logic ---
 document.addEventListener('DOMContentLoaded', () => {
     // Populate icons
     ICONS.forEach(icon => iconSelect.add(new Option(icon.charAt(0).toUpperCase() + icon.slice(1), icon)));
-
-    // Login button
-    const loginBtn = document.getElementById('login-btn');
-    loginBtn.addEventListener('click', async () => {
-        await initiateLogin();
-    });
 
     // OAuth / billing redirect handling
     const urlParams = new URLSearchParams(window.location.search);
