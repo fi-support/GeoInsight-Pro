@@ -45,7 +45,8 @@ const SUBSCRIPTION_FEATURES = {
     WAGYU: ["Basic Map Access", "Awesome Markers", "Animated Line Drawing"] 
 };
 const CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
-const REDIRECT_URI = "http://127.0.0.1:5500/";
+//const REDIRECT_URI = "http://127.0.0.1:5500/";
+const REDIRECT_URI = "https://simaybtm.github.io/hub_externalapps/";
 const COGNITO_USER_POOL_DOMAIN = "auth.clearly.app";
 const OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
