@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clearly.Hub Apps Demo - Map</title>
+<title>GeoInsight Pro · Clearly.Hub Integration Demo</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css" />
@@ -20,139 +20,407 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/snap.svg/0.5.1/snap.svg-min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet.bezier@0.1.1/dist/leaflet.bezier.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
 </head>
 <body class="relative">
 <div class="container mx-auto p-4">
     <div id="app-container" class="app-locked">
-        <h1 class="text-2xl font-bold text-center text-gray-800 mb-8">Example App</h1>
+        <div class="app-header">
+            <div class="app-header-brand">
+                <div class="app-header-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>
+                </div>
+                <div>
+                    <div class="app-header-name">GeoInsight <span>Pro</span></div>
+                    <div class="app-header-tagline">Powered by <strong>Clearly.Hub</strong> Open Urban Platform</div>
+                </div>
+            </div>
+            <div class="app-header-actions">
+                <div id="user-email-display" class="user-email-chip hidden">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span></span>
+                </div>
+                <button id="manage-billing-btn" class="header-btn" disabled>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    Manage Plan
+                </button>
+                <button id="logout-btn" class="header-btn header-btn-logout hidden">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Sign Out
+                </button>
+            </div>
+        </div>
 
-        <div class="main-content flex flex-col md:flex-row gap-6">
-            <div class="left-side flex-1">
-                <div class="data-selectors mb-4">
-                    <div>
-                        <label for="hub-datasets-select">Hub Datasets:</label>
-                        <select id="hub-datasets-select" class="dataset-select" disabled>
-                            <option value="">Login to see datasets...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="all-datasets-select">All Available Datasets:</label>
-                        <select id="all-datasets-select" class="dataset-select" disabled>
-                            <option value="">Login to see datasets...</option>
-                        </select>
+        <div class="main-content">
+            <!-- ── Left Panel ───────────────────────────────── -->
+            <div class="left-panel">
+
+                <div class="panel-section">
+                    <h2 class="panel-section-heading">Your Plan</h2>
+                    <div class="sub-card">
+                        <div class="sub-card-header">
+                            <div class="sub-card-label">Current Tier</div>
+                            <span id="subscription-name" class="sub-tier-badge tier-none">No Plan</span>
+                        </div>
+                        <ul id="features-list" class="sub-features">
+                            <li class="sub-feature-empty">Sign in and select a plan to see your features.</li>
+                        </ul>
                     </div>
                 </div>
 
-                <p id="instruction-text" class="note-text">Select a WMS dataset to display it on the map.</p>
-                <div id="loader" class="loader hidden"></div>
-                <div id="map" class="h-[500px] w-full border"></div>
-            </div>
-
-            <div id="features-panel" class="w-full md:w-64">
-                <h2 class="text-lg font-semibold mb-2">Subscription Features</h2>
-                <div class="subscription-status">Current Tier: <span id="subscription-name">None</span></div>
-                <ul id="features-list" class="mt-4">
-                    <li>Login to see your features.</li>
-                </ul>
-
-                <div id="marker-controls" class="feature-controls hidden mt-4">
-                    <hr class="mb-4">
-                    <h3 class="font-semibold mb-2">Interactive Markers</h3>
+                <div id="marker-controls" class="panel-section hidden">
+                    <h2 class="panel-section-heading">Interactive Markers</h2>
                     <div id="marker-unlocked">
-                        <label for="icon-select" class="block text-sm font-medium text-gray-700 mb-1">Choose an Icon:</label>
-                        <select id="icon-select" class="dataset-select mb-3"></select>
-                        <button id="add-marker-btn" class="btn btn-primary">Enter Add Marker Mode</button>
+                        <div class="flex gap-2 items-center">
+                            <select id="icon-select" class="dataset-select flex-1"></select>
+                            <button id="add-marker-btn" class="btn btn-primary btn-sm">Add Marker</button>
+                        </div>
                     </div>
                     <div id="marker-locked" class="hidden">
-                        <p class="feature-locked-message">Upgrade to STEAK or WAGYU to add custom markers.</p>
+                        <p class="feature-locked-message">Upgrade to <strong>Professional</strong> or <strong>Enterprise</strong> to unlock.</p>
                     </div>
                 </div>
 
-                <div id="bezier-controls" class="feature-controls hidden mt-4">
-                    <hr class="mb-4">
-                    <h3 class="font-semibold mb-2">Animated Drawing</h3>
+                <div id="bezier-controls" class="panel-section hidden">
+                    <h2 class="panel-section-heading">Heatmap Analysis</h2>
                     <div id="bezier-unlocked">
-                        <button id="draw-line-btn" class="btn btn-primary">Draw Animated Line</button>
-                        <button id="finish-line-btn" class="btn btn-secondary hidden mt-2">Finish Drawing</button>
+                        <button id="heatmap-btn" class="btn btn-primary w-full">Generate Activity Heatmap</button>
                     </div>
                     <div id="bezier-locked" class="hidden">
-                        <p class="feature-locked-message">Upgrade to WAGYU to draw animated lines.</p>
+                        <p class="feature-locked-message">Upgrade to <strong>Enterprise</strong> to unlock.</p>
                     </div>
                 </div>
 
-                <div id="simulation-controls" class="feature-controls hidden mt-4">
-                    <hr class="mb-4">
-                    <h3 class="font-semibold mb-2">Data Services</h3>
-                    <button id="run-simulation-btn" class="btn btn-api w-full">Run Traffic Simulation</button>
-                    <p class="text-xs text-gray-500 mt-2">Simulates a backend call to Dat.Mobility using the current map view.</p>
-                </div>
             </div>
 
-            <div id="js-panel" class="w-full md:w-96 border p-2 flex flex-col">
-                <h2 class="text-lg font-semibold mb-2">Script Panel</h2>
-                <p class="text-sm mb-2">Here, you can find the code snippets (JavaScript) used in this application. To better understand how the components are integrated and how the data layers are fetched, click on a tab.</p>
+            <!-- ── Map Area ───────────────────────────────── -->
+            <div class="map-area">
 
-                <div class="flex mb-2 border-b flex-wrap">
-                    <button class="tab-btn px-3 py-1 font-semibold border-b-2 border-transparent hover:border-blue-500" data-tab="login">Login</button>
-                    <button class="tab-btn px-3 py-1 font-semibold border-b-2 border-transparent hover:border-blue-500" data-tab="logout">Logout</button>
-                    <button class="tab-btn px-3 py-1 font-semibold border-b-2 border-transparent hover:border-blue-500" data-tab="subscription">Subscriptions</button>
-                    <button class="tab-btn px-3 py-1 font-semibold border-b-2 border-transparent hover:border-blue-500" data-tab="datasets">Datasets & Map</button>
-                    <button class="tab-btn px-3 py-1 font-semibold border-b-2 border-transparent hover:border-green-500 text-green-600" data-tab="backend">Backend View</button>
+                <!-- ── Data Source Bar ──────────────────── -->
+                <div class="data-source-bar">
+                    <div class="dsb-group">
+                        <span class="filter-label">Format</span>
+                        <div class="format-pills">
+                            <button class="format-pill active" title="WMS layers are supported">WMS</button>
+                            <button class="format-pill active" title="WFS layers are supported">WFS</button>
+                            <button class="format-pill" disabled title="Not supported in this demo">GeoJSON</button>
+                            <button class="format-pill" disabled title="Not supported in this demo">KML</button>
+                            <button class="format-pill" disabled title="Not supported in this demo">CSV</button>
+                        </div>
+                    </div>
+                    <div class="dsb-sep"></div>
+                    <div class="dsb-group dsb-hub-group">
+                        <label class="filter-label" for="hub-filter-select">Owner Hub</label>
+                        <select id="hub-filter-select" class="dataset-select" disabled>
+                            <option value="">Login to see hubs&hellip;</option>
+                        </select>
+                    </div>
+                    <div class="dsb-sep"></div>
+                    <div class="dsb-group dsb-datasets-group">
+                        <label class="filter-label" for="dataset-select">Dataset</label>
+                        <select id="dataset-select" class="dataset-select" disabled>
+                            <option value="">Select a dataset to add&hellip;</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div class="tab-content flex-1 overflow-auto bg-gray-50 p-2 rounded">
-<pre class="tab-panel hidden mt-0" data-tab="login">
-<p class="mb-2">This code handles user authentication via OAuth 2.0 PKCE flow with Amazon Cognito.</p>
-<code class="language-javascript">
-// Login script handled in main file
-</code>
-</pre>
+                <!-- ── Map + Layers Overlay ────────────── -->
+                <div class="map-wrapper">
+                    <div id="loader" class="loader hidden"></div>
+                    <div id="map" class="map-fill"></div>
 
-<pre class="tab-panel hidden mt-0" data-tab="logout">
-<p class="mb-2">This code handles user logout.</p>
-<code class="language-javascript">
-// Logout script handled in main file
-</code>
-</pre>
+                    <!-- Floating Layers Panel -->
+                    <div id="layers-overlay" class="layers-overlay hidden">
+                        <div class="lo-header">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                            Active Layers
+                            <span id="layers-count" class="layer-count-badge">0</span>
+                        </div>
+                        <div id="layers-list" class="lo-layers-list">
+                            <p class="list-empty-msg" style="padding:0.5rem 0.75rem;">No active layers.</p>
+                        </div>
+                    </div>
+                </div>
 
-<pre class="tab-panel hidden" data-tab="subscription">
-<p class="mb-2">This code manages subscription and billing features.</p>
-<code class="language-javascript">
-// Subscription script handled in main file
-</code>
-</pre>
+                <p id="instruction-text" class="note-text mt-2">Select a WMS dataset from the bar above to display it on the map.</p>
+            </div>
 
-<pre class="tab-panel hidden mt-0" data-tab="datasets">
-<p class="mb-2">This code interacts with the Clearly.Hub GraphQL API to fetch datasets and display WMS layers on a Leaflet map.</p>
-<code class="language-javascript">
-// Datasets script handled in main file
-</code>
-</pre>
 
-<pre class="tab-panel hidden mt-0" data-tab="backend">
-<p class="mb-2 font-bold text-green-700">
-👀 What Dat.Mobility Sees:
-This simulates the HTTP request your OUP API Gateway forwards to Dat.Mobility. Notice how the Platform explicitly passes the Hub ID so Dat.Mobility knows who to bill.
-</p>
-<code id="backend-payload" class="language-json">
-// Run a traffic simulation on the map to see the payload...
-</code>
-</pre>
+
+            <div id="dev-console" class="flex flex-col dev-console dev-console-collapsed">
+                <div class="dev-header" id="dev-console-toggle" title="Expand developer console" style="cursor:pointer;">
+                    <span class="dev-title">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                        Developer Console
+                    </span>
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <span class="dev-badge">Live Demo</span>
+                        <svg id="dev-console-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s;transform:rotate(-90deg);"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                </div>
+                <p class="dev-description">Track API calls and explore how this app integrates with the Clearly.Hub platform in real time.</p>
+
+                <div class="dev-tabs">
+                    <button class="dev-tab active" data-dev-tab="authflow">Auth Flow</button>
+                    <button class="dev-tab" data-dev-tab="apilog">API Log <span id="api-log-count" class="log-count hidden">0</span></button>
+                    <button class="dev-tab" data-dev-tab="billing">Billing</button>
+                    <button class="dev-tab" data-dev-tab="reference">Reference</button>
+                </div>
+
+                <div class="dev-panel-content">
+                    <!-- Auth Flow Tab -->
+                    <div class="dev-panel" data-dev-panel="authflow">
+                        <p class="dev-panel-intro">This app uses <strong>OAuth 2.0 Authorization Code&nbsp;+&nbsp;PKCE</strong> via Clearly.Hub. No passwords are ever handled by the app directly &mdash; the identity provider manages all credentials.</p>
+                        <div class="flow-steps">
+                            <div class="flow-step">
+                                <div class="flow-step-num">1</div>
+                                <div class="flow-step-body">
+                                    <div class="flow-step-title">Generate PKCE Challenge</div>
+                                    <div class="flow-step-desc">A random <code>code_verifier</code> and its SHA-256 hash (<code>code_challenge</code>) are created client-side before any redirect.</div>
+                                    <pre class="flow-code"><code>const verifier = generateRandomString(128);
+const challenge = await sha256(verifier);
+sessionStorage.setItem('pkce_verifier', verifier);</code></pre>
+                                </div>
+                            </div>
+                            <div class="flow-step">
+                                <div class="flow-step-num">2</div>
+                                <div class="flow-step-body">
+                                    <div class="flow-step-title">Redirect to Identity Provider</div>
+                                    <div class="flow-step-desc">The user is sent to the Clearly.Hub Cognito endpoint. Your app <em>never</em> sees the password.</div>
+                                    <pre class="flow-code"><code>window.location.href =
+  `https://auth.clearly.app/oauth2/authorize
+  ?response_type=code
+  &amp;client_id=${CLIENT_ID}
+  &amp;code_challenge=${challenge}
+  &amp;code_challenge_method=S256`;</code></pre>
+                                </div>
+                            </div>
+                            <div class="flow-step">
+                                <div class="flow-step-num">3</div>
+                                <div class="flow-step-body">
+                                    <div class="flow-step-title">Exchange Code for Tokens</div>
+                                    <div class="flow-step-desc">After login, Cognito redirects back with a short-lived <code>code</code>. The app exchanges it for an <code>access_token</code>.</div>
+                                    <pre class="flow-code"><code>const res = await fetch(TOKEN_ENDPOINT, {
+  method: 'POST',
+  body: new URLSearchParams({
+    grant_type: 'authorization_code',
+    code, code_verifier: verifier,
+    client_id: CLIENT_ID
+  })
+});
+const { access_token } = await res.json();</code></pre>
+                                </div>
+                            </div>
+                            <div class="flow-step">
+                                <div class="flow-step-num">4</div>
+                                <div class="flow-step-body">
+                                    <div class="flow-step-title">Authorized API Access</div>
+                                    <div class="flow-step-desc">Every subsequent API call includes the token as a <code>Bearer</code> header. The platform verifies it on every request.</div>
+                                    <pre class="flow-code"><code>fetch('/api/graphql', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${access_token}`
+  },
+  body: JSON.stringify({ query, variables })
+});</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- API Log Tab -->
+                    <div class="dev-panel hidden" data-dev-panel="apilog">
+                        <p class="dev-panel-intro">Live log of API requests made during this session. Interact with the app to see calls appear here.</p>
+                        <div id="api-log-list" class="api-log-list">
+                            <p class="log-empty-msg">No requests yet &mdash; log in to start tracking.</p>
+                        </div>
+                    </div>
+
+                    <!-- Billing Tab -->
+                    <div class="dev-panel hidden" data-dev-panel="billing">
+                        <p class="dev-panel-intro">The <strong>Billing Component</strong> is a hosted UI on Clearly.Hub. Your app redirects the user there; the platform handles subscription selection and payment, then redirects back with a result.</p>
+                        <div class="flow-steps">
+                            <div class="flow-step">
+                                <div class="flow-step-num">1</div>
+                                <div class="flow-step-body">
+                                    <div class="flow-step-title">Redirect to Billing Component</div>
+                                    <div class="flow-step-desc">Construct a base64-encoded payload and append it to the component URL. The <code>origin</code> is where Clearly.Hub will redirect the user back after checkout.</div>
+                                    <pre class="flow-code"><code>const payload = btoa(JSON.stringify({
+  actions: ["SELECT_SUBSCRIPTION"],
+  redirect_url: REDIRECT_URI,
+  client_id: CLIENT_ID
+}));
+window.location.href =
+  `https://hub.clearly.app/components/${payload}`;</code></pre>
+                                </div>
+                            </div>
+                            <div class="flow-step">
+                                <div class="flow-step-num">2</div>
+                                <div class="flow-step-body">
+                                    <div class="flow-step-title">User Selects a Plan</div>
+                                    <div class="flow-step-desc">Clearly.Hub displays the available subscription plans for your app. The user picks one and confirms. Your app is <em>not involved</em> in this step &mdash; no payment code required.</div>
+                                </div>
+                            </div>
+                            <div class="flow-step">
+                                <div class="flow-step-num">3</div>
+                                <div class="flow-step-body">
+                                    <div class="flow-step-title">Handle the Redirect Back</div>
+                                    <div class="flow-step-desc">Clearly.Hub redirects to your <code>origin</code> with a <code>?data=</code> query parameter containing a base64-encoded subscription result.</div>
+                                    <pre class="flow-code"><code>const params = new URLSearchParams(location.search);
+const raw = params.get('data');
+if (raw) {
+  const result = JSON.parse(atob(raw));
+  // result.subscription.name  → "PROFESSIONAL"
+  // result.subscription.externalReference
+  // result.subscribedHub._id
+  sessionStorage.setItem(
+    'subscriptionName',
+    result.subscription.name.toUpperCase()
+  );
+}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="billing-note">
+                            <strong>Tip:</strong> Use <code>externalReference</code> on the subscription model to map Clearly.Hub plan IDs to your own internal tier names (e.g., <em>"starter"</em>, <em>"pro"</em>, <em>"enterprise"</em>).
+                        </div>
+                    </div>
+
+                    <!-- Reference Tab -->
+                    <div class="dev-panel hidden" data-dev-panel="reference">
+                        <p class="dev-panel-intro">Actual GraphQL queries and REST calls made by this application. All require <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+                        <div class="ref-list">
+                            <div class="ref-item">
+                                <span class="ref-method ref-post">GQL</span>
+                                <div class="ref-details">
+                                    <code>DatasetsForHubFilter</code>
+                                    <span>All datasets visible to the active hub &mdash; builds the Owner Hub picker</span>
+                                    <pre class="ref-code">datasets(activeHubId: $id, limit: 500) {
+  results {
+    _id
+    ownerHub { _id name }
+    resources { format }
+  }
+}</pre>
+                                </div>
+                            </div>
+                            <div class="ref-item">
+                                <span class="ref-method ref-post">GQL</span>
+                                <div class="ref-details">
+                                    <code>DatasetsByOwner</code>
+                                    <span>WMS&thinsp;/&thinsp;WFS datasets for a selected hub &mdash; populates the Dataset picker</span>
+                                    <pre class="ref-code">datasets(
+  activeHubId: $id
+  query: { ownerHubId: $hubId }
+) {
+  results { _id title resources { format } }
+}</pre>
+                                </div>
+                            </div>
+                            <div class="ref-item">
+                                <span class="ref-method ref-post">GQL</span>
+                                <div class="ref-details">
+                                    <code>Dataset (by id)</code>
+                                    <span>Resource URLs &amp; spatial extent &mdash; called when adding a layer to the map</span>
+                                    <pre class="ref-code">dataset(_id: $id, activeHubId: $id) {
+  _id title
+  spatial { coordinates }
+  resources { url format }
+}</pre>
+                                </div>
+                            </div>
+                            <div class="ref-item">
+                                <span class="ref-method ref-get">GET</span>
+                                <div class="ref-details">
+                                    <code>WMS GetCapabilities</code>
+                                    <span>Auto-discovers the layer name before adding WMS to the map</span>
+                                    <pre class="ref-code">{url}?service=WMS&amp;request=GetCapabilities</pre>
+                                </div>
+                            </div>
+                            <div class="ref-item">
+                                <span class="ref-method ref-get">GET</span>
+                                <div class="ref-details">
+                                    <code>WFS GetFeature</code>
+                                    <span>Fetches GeoJSON features from a WFS endpoint</span>
+                                    <pre class="ref-code">{url}?service=WFS&amp;version=2.0.0
+  &amp;request=GetFeature
+  &amp;outputFormat=application/json</pre>
+                                </div>
+                            </div>
+                            <div class="ref-item">
+                                <span class="ref-method ref-get">GET</span>
+                                <div class="ref-details">
+                                    <code>/api/apps?ssoClientId=&hellip;</code>
+                                    <span>Resolves the Clearly.Hub App ID from the Cognito SSO client</span>
+                                </div>
+                            </div>
+                            <div class="ref-item">
+                                <span class="ref-method ref-get">GET</span>
+                                <div class="ref-details">
+                                    <code>/api/me/app-subscriptions/{appId}</code>
+                                    <span>Loads the user&rsquo;s active subscription tier on every login</span>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="https://hub.clearly.app" target="_blank" rel="noopener noreferrer" class="ref-docs-link">View Full API Documentation &rarr;</a>
+                    </div>
+
                 </div>
             </div>
         </div>
 
-        <div class="button-group mt-4 flex gap-2">
-            <button id="manage-billing-btn" class="btn btn-api" disabled>Manage Subscription</button>
-            <button id="logout-btn" class="btn btn-secondary hidden">Logout</button>
-        </div>
+        <div id="login-overlay">
+            <div class="login-card">
+                <div class="login-brand">
+                    <div class="login-brand-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>
+                    </div>
+                    <div class="login-app-name">GeoInsight <span>Pro</span></div>
+                    <div class="login-app-tagline">Urban Intelligence &amp; Analytics Platform</div>
+                </div>
+                <div class="login-body">
+                    <div class="login-prompt-text">Sign in to access your workspace</div>
 
-        <div id="login-overlay" class="absolute inset-0 bg-white/80 flex items-center justify-center z-50">
-            <div class="login-prompt bg-white p-6 rounded shadow text-center">
-                <p class="mb-4">Please log in to use the application.</p>
-                <button id="login-btn" class="btn btn-primary">Login to Clearly.Hub</button>
+                    <button id="login-btn" class="provider-btn provider-ch">
+                        <span class="provider-icon-wrap ch-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </span>
+                        <span class="provider-name">Continue with Clearly.Hub</span>
+                        <span class="provider-status sso-active">SSO Active</span>
+                    </button>
+
+                    <div class="provider-separator"><span>Other sign-in options</span></div>
+
+                    <button class="provider-btn" disabled title="Google Workspace SSO has not been configured for this application">
+                        <span class="provider-icon-wrap">
+                            <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                        </span>
+                        <span class="provider-name">Google Workspace</span>
+                        <span class="provider-status sso-inactive">Not configured</span>
+                    </button>
+
+                    <button class="provider-btn" disabled title="Microsoft 365 SSO has not been configured for this application">
+                        <span class="provider-icon-wrap">
+                            <svg width="16" height="16" viewBox="0 0 24 24"><rect x="1" y="1" width="10.5" height="10.5" fill="#f25022"/><rect x="12.5" y="1" width="10.5" height="10.5" fill="#7fba00"/><rect x="1" y="12.5" width="10.5" height="10.5" fill="#00a4ef"/><rect x="12.5" y="12.5" width="10.5" height="10.5" fill="#ffb900"/></svg>
+                        </span>
+                        <span class="provider-name">Microsoft 365</span>
+                        <span class="provider-status sso-inactive">Not configured</span>
+                    </button>
+
+                    <button class="provider-btn" disabled title="LinkedIn SSO has not been configured for this application">
+                        <span class="provider-icon-wrap" style="background:#0A66C2;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                        </span>
+                        <span class="provider-name">LinkedIn</span>
+                        <span class="provider-status sso-inactive">Not configured</span>
+                    </button>
+                </div>
+                <div class="login-footer">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Secured via <strong>Clearly.Hub</strong> &middot; OAuth 2.0 / PKCE
+                </div>
             </div>
         </div>
 
@@ -162,25 +430,27 @@ This simulates the HTTP request your OUP API Gateway forwards to Dat.Mobility. N
 <script src="script.js"></script>
 
 <script>
-// Tab handling
-document.querySelectorAll('.tab-btn').forEach(btn => {
+// Developer Console tab handling
+document.querySelectorAll('.dev-tab').forEach(btn => {
     btn.addEventListener('click', () => {
-        const tab = btn.getAttribute('data-tab');
-        document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
-        document.querySelector(`.tab-panel[data-tab="${tab}"]`).classList.remove('hidden');
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('border-blue-500','text-blue-600', 'border-green-500', 'text-green-600'));
-        
-        if(tab === 'backend') {
-            btn.classList.add('border-green-500','text-green-600');
-        } else {
-            btn.classList.add('border-blue-500','text-blue-600');
-        }
-
-        // Re-run Highlight.js after showing the tab
-        document.querySelectorAll('.tab-panel code').forEach(block => hljs.highlightElement(block));
+        const tab = btn.getAttribute('data-dev-tab');
+        document.querySelectorAll('.dev-tab').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.dev-panel').forEach(p => p.classList.add('hidden'));
+        btn.classList.add('active');
+        const panel = document.querySelector(`.dev-panel[data-dev-panel="${tab}"]`);
+        if (panel) panel.classList.remove('hidden');
     });
 });
-document.querySelector('.tab-btn').click();
+
+// Developer Console collapse toggle
+document.getElementById('dev-console-toggle').addEventListener('click', () => {
+    const panel = document.getElementById('dev-console');
+    panel.classList.toggle('dev-console-collapsed');
+    const isCollapsed = panel.classList.contains('dev-console-collapsed');
+    document.getElementById('dev-console-toggle').title = isCollapsed
+        ? 'Expand developer console'
+        : 'Collapse developer console';
+});
 </script>
 
 </body>
