@@ -82,7 +82,7 @@ const ALL_PLAN_FEATURES = [
 const CLIENT_ID = "4u2og3j1vr8p8a4at1cl3jklbn";
 const REDIRECT_URI = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
     ? window.location.href.split('?')[0].split('#')[0]
-    : "https://simaybtm.github.io/hub_externalapps/";
+    : "https://fi-support.github.io/GeoInsight-Pro/";
 const COGNITO_USER_POOL_DOMAIN = "auth.clearly.app";
 const OAUTH_TOKEN_ENDPOINT = `https://${COGNITO_USER_POOL_DOMAIN}/oauth2/token`;
 const BASE_COMPONENT_URL = "https://hub.clearly.app/components/";
